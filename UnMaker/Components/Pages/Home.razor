@@ -1,0 +1,68 @@
+﻿@page "/"
+
+<head>
+    <link rel="stylesheet" href="/css/fonts.css" />
+</head>
+
+<PageTitle>Deck List</PageTitle>
+
+@inject UnMakerContext DBContext
+@inject Microsoft.AspNetCore.Components.NavigationManager navigationManager
+
+<h4 class="text-center text-uppercase">Deck List</h4>
+<script src="_content/Blazored.Modal/blazored.modal.js"></script>
+
+@if(Decks == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <button class="btn btn-primary">
+        <NavLink href="DeckEditor" style="text-decoration: none; color: white;">New Deck</NavLink>
+    </button>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var deck in Decks)
+            {
+                <tr>
+                    <td>
+                        <img src="@Imgur.IdToImage(deck.CardBackImageURL)"
+                             width="100"
+                             height="140" />
+                        @deck.Name
+                    </td>
+                    <td class="nav-item">
+                        <button class="btn btn-primary">
+                            <NavLink href="@("/DeckEditor/" + deck.DeckId)" style="text-decoration: none; color: white;">Edit Deck</NavLink>
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Deck>? Decks;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if(DBContext != null)
+        {
+            Decks = await DBContext.Deck.ToListAsync();
+        }
+
+        if(DBContext != null)
+        {
+            await DBContext.DisposeAsync();
+        }
+
+        return;
+    }
+}

@@ -1,0 +1,140 @@
+﻿@inject IJSRuntime JsRuntime
+
+<CropperComponent Src="@Image" @ref=cropperComponent ErrorLoadImageSrc="@_errorLoadImageSrc" ErrorLoadImageClass="cropper-error-load center" IsAvailableInitCropper="@IsAvailableInitCropper" IsErrorLoadImage="@IsErrorLoadImage" OnErrorLoadImageEvent="OnErrorLoadImageEvent" Options="new Options{ AspectRatio = (decimal)172/187 }" />
+
+<div class="row">
+    <div class="col-sm">
+        <button class="btn btn-primary" @onclick="Done" disabled="@uploading">Save</button>
+    </div>
+</div>
+
+<style>
+    .big-img {
+        max-height: 860px;
+        max-width: 935px;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string Image { get; set; } = "";
+    [Parameter]
+    public int CardId { get; set; }
+    [Parameter]
+    public EventCallback<Tuple<int, string>> OnCropCallback { get; set; }
+
+    private readonly string _errorLoadImageSrc = "not-found-image.jpg";
+    private bool IsErrorLoadImage { get; set; } = false;
+    private bool IsAvailableInitCropper { get; set; } = true;
+
+    string oldImage = "";
+    bool uploading = false;
+
+    private CropperComponent? cropperComponent = null!;
+    private string croppedCanvasDataURL = "";
+
+    public async Task GetCroppedCanvasDataURLAsync()
+    {
+        GetCroppedCanvasOptions getCroppedCanvasOptions = new GetCroppedCanvasOptions
+            {
+                MaxHeight = 4096,
+                MaxWidth = 4096,
+                ImageSmoothingQuality = "high"
+            };
+
+        croppedCanvasDataURL = await cropperComponent!.GetCroppedCanvasDataURLAsync(getCroppedCanvasOptions);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        uploading = false;
+
+        if (IsErrorLoadImage)
+        {
+            IsAvailableInitCropper = true;
+            IsErrorLoadImage = false;
+        }
+        else
+        {
+            IsAvailableInitCropper = false;
+        }
+
+        if(cropperComponent!= null)
+        {
+            if (!String.IsNullOrEmpty(oldImage))
+            {
+                await Task.WhenAll(
+                cropperComponent.ReplaceAsync(Image, false).AsTask(),
+                cropperComponent.RevokeObjectUrlAsync(oldImage).AsTask())
+                .ContinueWith(x =>
+                {
+                    oldImage = Image;
+                });
+            }
+            else
+            {
+                cropperComponent.InitCropper();
+                oldImage = Image;
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if(firstRender)
+        {
+            uploading = false;
+
+            if (IsErrorLoadImage)
+            {
+                IsAvailableInitCropper = true;
+                IsErrorLoadImage = false;
+            }
+            else
+            {
+                IsAvailableInitCropper = false;
+            }
+
+            if (!String.IsNullOrEmpty(oldImage))
+            {
+                await Task.WhenAll(
+                cropperComponent!.ReplaceAsync(Image, false).AsTask(),
+                cropperComponent!.RevokeObjectUrlAsync(oldImage).AsTask())
+                .ContinueWith(x =>
+                {
+                    oldImage = Image;
+                });
+            }
+            else
+            {
+                cropperComponent?.InitCropper();
+                oldImage = Image;
+            }
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public async Task Done()
+    {
+        await GetCroppedCanvasDataURLAsync();
+        uploading = true;
+        await InvokeAsync(StateHasChanged);
+        await OnCropCallback.InvokeAsync(new Tuple<int, string>(CardId, croppedCanvasDataURL));
+    }
+
+    public void OnErrorLoadImageEvent(ErrorEventArgs errorEventArgs)
+    {
+        IsErrorLoadImage = true;
+        Destroy();
+        StateHasChanged();
+    }
+
+    private void Destroy()
+    {
+        cropperComponent?.Destroy();
+        cropperComponent?.RevokeObjectUrlAsync(Image);
+    }
+}

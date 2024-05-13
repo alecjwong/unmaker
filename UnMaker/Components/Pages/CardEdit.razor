@@ -1,0 +1,225 @@
+﻿@if (enableBonusAttack)
+{
+    <div>Surround bonus attack titles with '~'</div>
+}
+
+@foreach(Effect effect in effects)
+{
+    <div class="row">
+        <div class="col-sm">
+            <input type="text" class="form-control" placeholder="Input Timing" @bind="effect.timing" />
+        </div>
+        <div class="col">
+            <input type="text" class="form-control" placeholder="Input Effects" @bind="effect.effect" />
+        </div>
+        <div class="col-sm">
+            <button class="btn btn-primary" @onclick="(() => InsertAbove(effect))">Insert Above</button>
+        </div>
+        <div class="col-sm">
+            <button class="btn btn-primary" @onclick="(() => InsertBelow(effect))">Insert Below</button>
+        </div>
+        <div class="col-sm">
+            <button class="btn btn-primary" @onclick="(() => effects.Remove(effect))">Insert Below</button>
+        </div>
+    </div>
+}
+
+<input type="checkbox" id="bonusCheck" name="bonusCheck" @bind="enableBonusAttack">
+<label for="bonusCheck"> Enable Bonus Attack</label>
+
+@if(enableBonusAttack)
+{
+    <div class="row">
+        <div class="col-sm">
+            <input type="text" class="form-control" placeholder="Input Bonus Attack Title" @bind="Image.card.BonusTitle"/>
+        </div>
+        <div class="col-sm">
+            <input type="number" class="form-control" placeholder="Input Bonus Attack Value" @bind="Image.card.BonusValue" />
+        </div>
+    </div>
+    @foreach (Effect effect in bonusEffects)
+    {
+        <div class="row">
+            <div class="col-sm">
+                <input type="text" class="form-control" placeholder="Input Timing" @bind="effect.timing" />
+            </div>
+            <div class="col">
+                <input type="text" class="form-control" placeholder="Input Effects" @bind="effect.effect" />
+            </div>
+            <div class="col-sm">
+                <button class="btn btn-primary" @onclick="(() => InsertBonusAbove(effect))">Insert Above</button>
+            </div>
+            <div class="col-sm">
+                <button class="btn btn-primary" @onclick="(() => InsertBonusBelow(effect))">Insert Below</button>
+            </div>
+            <div class="col-sm">
+                <button class="btn btn-primary" @onclick="(() => effects.Remove(effect))">Insert Below</button>
+            </div>
+        </div>
+    }
+}
+
+<div class="row">
+    <label for="BOOST Trick" class="col-sm col-form-label">BOOST Trick</label>
+    <div class="col-sm">
+        <input id="Name" name="Name" type="text" class="form-control" @bind="Image.card.BoostEffect">
+    </div>
+</div>
+
+<div class="row">
+    <button class="btn btn-primary" @onclick="Done">Update</button>
+</div>
+
+<!--
+        public string? Effects { get; set; }
+        public string? CardBackURL { get; set; }
+        public string? EffectBackgroundPatternURL {  get; set; }
+        public string? EffectBackgroundColor { get; set; }
+        public string? NameBackgroundPatternURL { get; set; }
+        public string? NameBackgroundColor { get; set; }
+        public string? BorderColor { get; set; }
+        public string? TitleColor { get; set; }
+        public string? TitleSize { get; set; }
+        public string? TitleFont { get; set; }
+        public string? NameColor { get; set; }
+        public string? NameSize { get; set; }
+        public string? NameFont { get; set; }
+        public string? EffectColor { get; set; }
+        public string? EffectSize { get; set; }
+        public string? EffectFont { get; set; }
+-->
+
+@code {
+    [Parameter]
+    public CardImage Image { get; set; } = new CardImage();
+    [Parameter]
+    public EventCallback<CardImage> OnEditCallback { get; set; }
+
+    private List<Effect> effects = new List<Effect>();
+    private List<Effect> bonusEffects = new List<Effect>();
+
+    private bool enableBonusAttack = false;
+
+    private async Task Done()
+    {
+        string cardEffect = "";
+        foreach (Effect effect in effects)
+        {
+            if(!String.IsNullOrEmpty(effect.timing + effect.effect + effect.bonusAttack + effect.moreEffect))
+                cardEffect += "{" + effect.timing + (effect.timing == "" ? "" : ": ") + "}" + effect.effect;
+        }
+        Image.card.Effects = cardEffect;
+        string bonusEffect = "";
+        foreach (Effect effect in bonusEffects)
+        {
+            if (!String.IsNullOrEmpty(effect.timing + effect.effect + effect.bonusAttack + effect.moreEffect))
+                bonusEffect += "{" + effect.timing + (effect.timing == "" ? "" : ": ") + "}" + effect.effect;
+        }
+        Image.card.BonusEffects = bonusEffect;
+        if(!enableBonusAttack)
+        {
+            Image.card.BonusTitle = "";
+        }
+        await OnEditCallback.InvokeAsync(Image);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        effects.Clear();
+        if (Image.card.Effects != null)
+        {
+            //split effects
+            string[] splitEffect = Image.card.Effects.Split("{");
+            foreach (string eff in splitEffect.ToList())
+            {
+                Effect effect = new Effect();
+                if (!eff.Equals(""))
+                {
+                    string[] delimiters = { ": }", "}" };
+                    string[] timingAndEffect = eff.Split(delimiters, System.StringSplitOptions.RemoveEmptyEntries);
+                    if (timingAndEffect.Length > 0)
+                    {
+                        if (timingAndEffect.Length < 2)
+                        {
+                            effect.effect = timingAndEffect[0];
+                        }
+                        else
+                        {
+                            effect.timing = timingAndEffect[0];
+                            effect.effect = timingAndEffect[1];
+                        }
+                        effects.Add(effect);
+                    }
+                }
+            }
+        }
+        if(effects.Count == 0)
+        {
+            effects.Add(new Effect());
+        }
+
+        if(!String.IsNullOrEmpty(Image.card.BonusTitle))
+        {
+            enableBonusAttack = true;
+        }
+
+        bonusEffects.Clear();
+        if (Image.card.BonusEffects != null)
+        {
+            //split effects
+            string[] splitEffect = Image.card.BonusEffects.Split("{");
+            foreach (string eff in splitEffect.ToList())
+            {
+                Effect effect = new Effect();
+                if (!eff.Equals(""))
+                {
+                    string[] delimiters = { ": }", "}" };
+                    string[] timingAndEffect = eff.Split(delimiters, System.StringSplitOptions.RemoveEmptyEntries);
+                    if (timingAndEffect.Length > 0)
+                    {
+                        if (timingAndEffect.Length < 2)
+                        {
+                            effect.effect = timingAndEffect[0];
+                        }
+                        else
+                        {
+                            effect.timing = timingAndEffect[0];
+                            effect.effect = timingAndEffect[1];
+                        }
+                        bonusEffects.Add(effect);
+                    }
+                }
+            }
+        }
+        if (bonusEffects.Count == 0)
+        {
+            bonusEffects.Add(new Effect());
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void InsertAbove(Effect effect)
+    {
+        int index = effects.FindIndex(m => m == effect);
+        effects.Insert(index, new Effect());
+    }
+
+    private void InsertBelow(Effect effect)
+    {
+        int index = effects.FindIndex(m => m == effect);
+        effects.Insert(index + 1, new Effect());
+    }
+
+    private void InsertBonusAbove(Effect effect)
+    {
+        int index = effects.FindIndex(m => m == effect);
+        bonusEffects.Insert(index, new Effect());
+    }
+
+    private void InsertBonusBelow(Effect effect)
+    {
+        int index = effects.FindIndex(m => m == effect);
+        bonusEffects.Insert(index + 1, new Effect());
+    }
+}

@@ -1,0 +1,38 @@
+﻿using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+namespace UnMaker.Migrations
+{
+    /// <inheritdoc />
+    public partial class NewColumns : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.AddColumn<string>(
+                name: "BorderColor",
+                table: "HeroCard",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "HealthColor",
+                table: "HeroCard",
+                type: "TEXT",
+                nullable: true);
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropColumn(
+                name: "BorderColor",
+                table: "HeroCard");
+
+            migrationBuilder.DropColumn(
+                name: "HealthColor",
+                table: "HeroCard");
+        }
+    }
+}

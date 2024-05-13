@@ -1,0 +1,78 @@
+﻿@inject UnMakerContext DBContext
+
+@if (selectingDeck)
+{
+    <div class="row">
+        @foreach (Deck deck in deckList)
+        {
+            if (deck.DeckId != DeckId)
+            {
+                <div class="col">
+                    <div class="row">
+                        <p>@deck.Name</p>
+                    </div>
+                    <div class="row">
+                        <svg viewBox="0 0 124 173.3" width="124" height="173.3">
+                            <image width="124" height="173.3" href="@Imgur.IdToImage(deck.CardBackImageURL)"></image>
+                        </svg>
+                    </div>
+                    <div class="row">
+                        <button class="btn btn-primary" @onclick="(() => ChooseDeck(deck.DeckId))">Copy Cards</button>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+}
+else
+{
+    <div class="row">
+        @foreach (Card card in cards)
+        {
+            <div class="col">
+                <div class="row">
+                    <p>@card.Title</p>
+                </div>
+                <div class="row">
+                    <svg viewBox="0 0 124 173.3" width="124" height="173.3">
+                        <image width="124" height="173.3" href="@Imgur.IdToImage(card.CardImageURL)"></image>
+                    </svg>
+                </div>
+                <div class="row">
+                    <button class="btn btn-primary" @onclick="(() => CardSelected(card.CardId))">Copy</button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<Deck> deckList = new List<Deck>();
+    private List<Card> cards = new List<Card>();
+    public bool selectingDeck = true;
+
+    [Parameter]
+    public int DeckId { get; set; }
+    [Parameter]
+    public EventCallback<int> OnClickCallback { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        deckList = await DBContext.Deck.ToListAsync();
+        await base.OnInitializedAsync();
+    }
+
+    private async void ChooseDeck(int deckId)
+    {
+        cards.Clear();
+        cards = await DBContext.Card.ToListAsync();
+        cards.RemoveAll(m => m.DeckId != deckId);
+        selectingDeck = false;
+    }
+
+    private async void CardSelected(int cardId)
+    {
+        await OnClickCallback.InvokeAsync(cardId);
+        selectingDeck = true;
+    }
+}

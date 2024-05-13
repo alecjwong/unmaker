@@ -1,0 +1,1684 @@
+﻿@page "/DeckEditor/{id?}"
+@rendermode InteractiveServer
+
+@inject UnMakerContext DBContext
+@inject IJSRuntime JsRuntime
+@inject IConfiguration _config
+
+<head>
+    <link rel="stylesheet" href="/css/fonts.css" />
+</head>
+
+<h3>Deck Editor</h3>
+
+<Modal @ref="modal" Size="ModalSize.Large"/>
+
+<div class="row">
+    <label for="Name" class="col-sm col-form-label">Name</label>
+    <div class="col-sm">
+        <input id="Name" name="Name" type="text" class="form-control" @bind="@deck.Name">
+    </div>
+    <div class="col-sm">
+        <button class="btn btn-primary" disabled="@saveDisabled" @onclick="SaveDeck">Save</button>
+    </div>
+    <div class="col-sm">
+        <button class="btn btn-primary" @onclick="ExportToJSON">Export as JSON</button>
+    </div>
+    <div class="col-sm">
+        <Button Color="ButtonColor.Primary" @onclick="OnShowModalClick">Copy Cards</Button>
+    </div>
+    <div class="col-sm">
+        <button class="btn btn-primary" >
+            <NavLink href="@("/")" style="text-decoration: none; color: white;">Return to Deck List</NavLink>
+        </button>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm">
+        <div class="row">
+            <InputFile type="file" OnChange="@(args => DisplayImage(ImageType.CardBack, args))" />
+        </div>
+        <div class="row">
+            <div style="display:@isDisplayCardback">
+                <img alt="" src="@cardbackThumbnail" style="height:280px;width:200px;" />
+            </div>
+        </div>
+    </div>
+    <!--
+    <div class="col-sm">
+        <div class="row">
+            <InputFile type="file" OnChange="@(args => DisplayImage(ImageType.BackgroundPattern, args))" />
+        </div>
+        <div class="row">
+            <div style="display:@isDisplayPattern">
+                <img alt="" src="@backgroundpatternThumbnail" style="height:280px;width:200px;" />
+            </div>
+        </div>
+    </div>
+    -->
+</div>
+
+<h3>Edit Hero Cards</h3>
+<button class="btn btn-primary" @onclick="AddHeroCard">Add Hero Card</button>
+<table class="table">
+    @foreach(HeroCardImage h in heroCards)
+    {
+        <tr>
+            <th rowspan="2">
+                <svg width="180" height="300">
+                <svg id="@("hero" + h.heroCard.HeroCardId)" viewBox="0 0 124 173.3" xmlns="http://www.w3.org/2000/svg">
+                    <!--Background Color-->
+                    <rect width="118" height="167.3" x="3" y="3" fill="@h.heroCard.BottomBackgroundColor"></rect>
+                    <rect width="118" height="81.9" x="3" y="45.6" fill="@h.heroCard.TopBackgroundColor"></rect>
+                
+                    <!--Card Border-->
+                    <rect width="118" height="167.3" x="3" y="3" stroke-width="6" rx="3" ry="3" stroke="@h.heroCard.BorderColor" fill="none"></rect>
+                    <path d="M9,3 h106 a6,6 0 0 1 6,6 v155.3 a6,6 0 0 1 -6,6 h-106 a6,6 0 0 1 -6,-6 v-155.3 a6,6 0 0 1 6,-6 z" fill="none" stroke="@h.heroCard.BorderColor" stroke-width="6" stroke-linejoin="round" />
+                
+                    <rect x="5.8" y="27.8" width="112.2" height=".8" fill="@h.heroCard.BorderColor"></rect>
+                    <rect x="5.8" y="44.5" width="112.2" height="2" fill="@h.heroCard.BorderColor"></rect>
+                    <rect x="5.8" y="126.8" width="112.2" height="2" fill="@h.heroCard.BorderColor"></rect>
+                
+                    <rect x="13.4" y="9.3" width=".4" height="18.6" fill="@h.heroCard.BorderColor"></rect>
+                    <rect x="13.4" y="31.1" width=".4" height="13.5" fill="@h.heroCard.BorderColor"></rect>
+                    <rect x="13.4" y="57.4" width=".4" height="69.7" fill="@h.heroCard.BorderColor"></rect>
+                
+                    @if(h.heroCard.NumSidekicks != 0)
+                    {
+                        <rect x="5.8" y="150.6" width="112.2" height=".8" fill="@h.heroCard.BorderColor"></rect>
+                        <rect x="13.4" y="132.1" width=".4" height="18.6" fill="@h.heroCard.BorderColor"></rect>
+                        <rect x="13.4" y="153.9" width=".4" height="13.5" fill="@h.heroCard.BorderColor"></rect>
+                        <rect x="81.1" y="151.2" width=".8" height="16.2" fill="@h.heroCard.BorderColor"></rect>
+                        <rect x="93.3" y="153.9" width=".4" height="13.5" fill="@h.heroCard.BorderColor"></rect>
+                    }
+                
+                    <!--Hero Health-->
+                    <rect x="81.1" y="28.4" width=".8" height="16.2" fill="@h.heroCard.BorderColor"></rect>
+                    <rect x="93.3" y="31.1" width=".4" height="13.5" fill="@h.heroCard.BorderColor"></rect>
+                
+                    <polygon fill="@h.heroCard.TopBackgroundColor" points="100.7,32.2 100.7,38.7 105.8,42.6 110.9,38.7 110.9,32.2 105.8,31.6"></polygon>
+                    <polygon fill="@h.heroCard.HealthColor" points="104.5,40 105.8,41.1 107.1,40"></polygon>
+                    <path stroke="@h.heroCard.BorderColor" stroke-width=".4" fill="none" d="M93.6,35.4 q12.5 -7.6 24.8 0"></path>
+                
+                    <!--Sidekick Health-->
+                    @if(h.heroCard.NumSidekicks == 1)
+                    {
+                        <polygon fill="@h.heroCard.TopBackgroundColor" points="100.7,155 100.7,161.5 105.8,165.4 110.9,161.5 110.9,155 105.8,154.4" ></polygon>
+                        <polygon fill="@h.heroCard.HealthColor" points="104.5,162.8 105.8,163.9 107.1,162.8"></polygon>
+                        <path stroke="@h.heroCard.BorderColor" stroke-width=".4" fill="none" d="M93.6,158.2 q12.5 -7.6 24.8 0"></path>
+                    }
+                    else if(h.heroCard.NumSidekicks > 2 && h.heroCard.SidekickHealth == 1)
+                    {
+                        //ADD MULTIS HERE (WITH MATH)
+                    }
+                    else if(h.heroCard.NumSidekicks == 2 && h.heroCard.SidekickHealth == 1)
+                    {
+                        //ADD MULTIS HERE (STATIC)
+                    }
+                    else if(h.heroCard.NumSidekicks > 1 && h.heroCard.SidekickHealth != 1)
+                    {
+                        //ADD ODA-STYLE MULTI SIDEKICKS HERE
+                    }
+                
+                    <!--Sideways Labels-->
+                    <text x="11" y="25.65" font-family="Bebas Neue" font-size="3.7pt" fill="white" transform="rotate(-90 11 25.65)">HERO</text>
+                    <text x="11" y="42.9" font-family="Bebas Neue" font-size="3.7pt" fill="white" transform="rotate(-90 11 42.9)">ATTACK</text>
+                    <text x="87" y="42.9" font-family="Bebas Neue" font-size="3.7pt" fill="white" transform="rotate(-90 87 42.9)">START</text>
+                    <text x="90.9" y="42.9" font-family="Bebas Neue" font-size="3.7pt" fill="white" transform="rotate(-90 90.9 42.9)">HEALTH</text>
+                
+                    <text x="11" y="124.7" font-family="Bebas Neue" font-size="3.7pt" fill="white" transform="rotate(-90 11 124.7)">SPECIAL ABILITY</text>
+                
+                    @if(h.heroCard.NumSidekicks != 0)
+                    {
+                        @:<text x="11" y="148.5" font-family="Bebas Neue" font-size="3.7pt" fill="white" transform="rotate(-90 11 148.5)">SIDEKICK</text>
+                        @:<text x="11" y="165.7" font-family="Bebas Neue" font-size="3.7pt" fill="white" transform="rotate(-90 11 165.7)">ATTACK</text>
+                        @:<text x="87" y="165.7" font-family="Bebas Neue" font-size="3.7pt" fill="white" transform="rotate(-90 87 165.7)">START</text>
+                        @:<text x="90.9" y="165.7" font-family="Bebas Neue" font-size="3.7pt" fill="white" transform="rotate(-90 90.9 165.7)">HEALTH</text>
+                    }
+                
+                    <!--Names-->
+                    <text x="16.9" y="25.7" font-family="Bebas Neue" font-size="13.3pt" fill="white" >@h.heroCard.HeroName</text>
+                    @if(h.heroCard.NumSidekicks != 0)
+                    {
+                        <text><text x="16.9" y="148.5" font-family="Bebas Neue" font-size="13.3pt" fill="white" >@h.heroCard.SidekickName</text></text>
+                    }
+                
+                    <!--Ability-->
+                    <svg width="78" height="100%" x="16.9" y="57.6">
+                        @foreach (AbilityChunk chunk in h.ability)
+                        {
+                            <text><text x="@chunk.x" y="@(chunk.y + 7.3)" font-family="League Gothic" font-size="6pt" fill="@h.heroCard.AbilityColor">@chunk.chunk</text></text>
+                        }
+                    </svg>
+                    
+                    <!--Move-->
+                    <polygon fill="@h.heroCard.AbilityColor" points="101.15,49.7 99.4,52.7 102.9,52.7"></polygon>
+                    <polygon fill="@h.heroCard.AbilityColor" points="101.15,125 99.4,122 102.9,122"></polygon>
+                    <rect fill="@h.heroCard.AbilityColor" x="100.9" y="52.5" width=".5" height="69.6"></rect>
+                    <text x="183.2" y="81.9" fill="@h.heroCard.AbilityColor" text-anchor="middle" font-family="Bebas Neue" font-size="33pt" transform="scale(0.6, 1)">@h.heroCard.Move</text>
+                    <text x="114.3" y="124.7" fill="@h.heroCard.AbilityColor" font-family="Knockout HTF72-FullCruiserwt" font-size="9.7pt" transform="rotate(-90 114.3 124.7)">MOVE</text>
+                    
+                    <!--Numbers-->
+                    <text x="105.7" y="39.1" fill="@h.heroCard.AbilityColor" text-anchor="middle" font-family="Bebas Neue" font-size="5.8pt">@h.heroCard.HeroHealth</text>
+                    @if(h.heroCard.NumSidekicks == 1)
+                    {
+                        <text><text x="105.7" y="161.9" fill="@h.heroCard.AbilityColor" text-anchor="middle" font-family="Bebas Neue" font-size="5.8pt">@h.heroCard.SidekickHealth</text></text>
+                    }
+                
+                    <!--Ranges-->
+                    @switch (h.heroCard.HeroRange)
+                    {
+                        case Models.Range.Melee:
+                            {
+                                <svg viewBox="0 0 12380 2950" width="60" height="13.7" x="14.1" y="29.78">
+                                    <g fill="#E4756D" stroke="none">
+                                        <path d="M7865 2619 c-249 -19 -510 -139 -690 -316 -357 -354 -445 -869 -225 -1318 326 -663 1197 -840 1755 -356 135 117 239 263 311 437 46 111 46 112 -18 107 -29 -3 -57 -5 -61 -6 -5 -2 -19 -28 -32 -60 -94 -233 -263 -415 -488 -527 -337 -167 -714 -140 -1032 73 -136 91 -287 275 -352 430 -63 151 -77 224 -78 407 0 143 3 176 23 245 58 200 140 343 272 474 216 216 509 321 814 291 241 -23 446 -120 620 -295 103 -103 173 -212 240 -377 15 -38 15 -38 75 -38 l59 0 -10 38 c-17 63 -104 238 -157 315 -102 147 -299 312 -455 381 -178 79 -371 111 -571 95z" />
+                                        <path d="M10735 2619 c-155 -14 -333 -70 -460 -146 -260 -157 -464 -425 -529 -696 l-7 -28 62 3 62 3 22 65 c87 258 287 479 538 595 269 124 591 121 864 -11 242 -116 433 -332 516 -582 48 -142 60 -231 54 -377 -10 -263 -105 -480 -292 -671 -487 -496 -1314 -363 -1627 261 -20 39 -44 96 -54 127 -19 63 -21 64 -97 51 -36 -5 -39 -8 -33 -34 11 -57 68 -190 116 -269 101 -168 227 -295 396 -397 259 -158 575 -200 880 -118 311 83 586 314 724 608 375 799 -253 1692 -1135 1616z" />
+                                        <path d="M7870 2010 c-19 -19 -20 -33 -20 -220 l0 -201 -247 4 c-137 3 -266 8 -287 12 -75 14 -136 -42 -136 -126 0 -88 86 -147 166 -114 29 12 83 15 270 15 l234 0 0 -214 c0 -193 2 -216 18 -237 26 -31 78 -31 104 0 17 22 18 53 18 542 0 506 -1 520 -20 539 -11 11 -33 20 -50 20 -17 0 -39 -9 -50 -20z" />
+                                        <path d="M390 1425 l0 -505 244 0 244 0 51 148 c98 279 114 322 121 322 3 0 42 -106 86 -235 l79 -235 238 0 237 0 0 505 0 505 -180 0 -180 0 0 -267 c0 -146 -3 -264 -6 -260 -3 3 -48 122 -99 264 l-93 258 -113 0 -112 0 -90 -257 c-50 -142 -94 -258 -99 -258 -4 0 -8 117 -8 260 l0 260 -160 0 -160 0 0 -505z" />
+                                        <path d="M1870 1425 l0 -505 430 0 430 0 0 130 0 130 -250 0 -251 0 3 78 3 77 163 3 162 2 0 80 0 80 -165 0 -165 0 0 75 0 75 250 0 250 0 0 140 0 140 -430 0 -430 0 0 -505z" />
+                                        <path d="M2890 1425 l0 -505 180 0 180 0 0 365 0 365 250 0 250 0 0 140 0 140 -430 0 -430 0 0 -505z" />
+                                        <path d="M3880 1425 l0 -505 430 0 430 0 0 130 0 130 -250 0 -251 0 3 78 3 77 163 3 162 2 0 80 0 80 -165 0 -165 0 0 75 0 75 250 0 250 0 0 140 0 140 -430 0 -430 0 0 -505z" />
+                                        <path d="M4900 1425 l0 -505 430 0 430 0 0 130 0 130 -250 0 -251 0 3 78 3 77 163 3 162 2 0 80 0 80 -165 0 -165 0 0 75 0 75 250 0 250 0 0 140 0 140 -430 0 -430 0 0 -505z" />
+                                        <path d="M8050 1607 l0 -97 1715 0 1715 0 0 -30 0 -30 -1715 0 -1715 0 0 -95 0 -95 73 5 c39 3 772 28 1627 55 855 28 1597 53 1649 56 l94 6 49 45 c26 25 48 51 48 59 0 17 -88 93 -114 99 -12 2 -721 27 -1576 55 -855 28 -1621 53 -1702 57 l-148 6 0 -96z" />
+                                    </g>
+                                </svg>
+                            }
+                            break;
+                        case Models.Range.Ranged:
+                            {
+                                <svg viewBox="0 0 13570 2960" width="62" height="14.1" x="16" y="29.5">
+                                    <g fill="#74B0DD" stroke="none">
+                                        <path d="M10409 2739 c-395 -58 -742 -308 -924 -665 -47 -92 -94 -226 -115 -326 l-11 -58 -112 0 -112 1 -105 195 c-58 108 -109 198 -115 200 -5 2 -274 3 -597 2 l-587 -3 154 -295 154 -295 -96 -185 c-53 -102 -123 -236 -155 -297 l-60 -113 239 0 238 0 98 190 c54 104 102 192 108 195 5 4 9 -70 9 -190 l0 -195 251 2 251 3 107 195 107 195 114 0 114 0 8 -44 c13 -74 67 -224 113 -316 62 -121 124 -205 229 -311 176 -176 384 -287 636 -341 118 -25 362 -25 480 0 176 38 353 116 486 215 95 71 245 225 303 313 82 124 170 337 186 452 l7 47 221 -2 221 -3 74 -135 c41 -74 91 -165 111 -203 l37 -67 425 286 c233 157 430 292 437 299 11 10 -68 67 -419 304 -237 161 -437 290 -443 288 -6 -3 -56 -89 -111 -191 l-100 -186 -226 0 -227 0 -7 48 c-3 26 -22 94 -41 152 -146 439 -516 756 -973 834 -100 17 -286 19 -382 5z m436 -214 c196 -49 403 -174 527 -318 122 -142 189 -268 241 -457 30 -111 30 -381 -1 -493 -87 -316 -277 -553 -557 -692 -343 -170 -746 -141 -1066 76 -132 89 -266 245 -343 397 -29 58 -86 221 -86 246 0 15 13 16 95 14 l96 -3 23 -65 c97 -280 325 -490 607 -561 117 -30 291 -30 413 0 263 63 491 260 592 509 48 120 59 179 59 327 0 169 -16 237 -85 380 -86 175 -213 304 -385 390 -135 68 -223 88 -380 89 -164 0 -242 -18 -391 -90 -94 -44 -126 -67 -198 -135 -47 -45 -108 -114 -134 -154 -52 -77 -106 -195 -117 -257 l-7 -38 -98 0 -98 0 13 59 c74 316 306 593 605 722 213 92 451 111 675 54z m-75 -376 c211 -56 385 -226 457 -444 33 -102 38 -263 10 -365 -82 -300 -343 -500 -651 -500 -111 0 -185 18 -291 69 -97 48 -188 128 -249 220 -37 56 -86 150 -86 167 0 2 44 4 98 4 l98 0 23 -41 c39 -68 123 -144 207 -185 71 -36 85 -39 178 -42 73 -3 117 0 156 12 240 70 389 316 339 558 -30 144 -123 265 -252 328 -143 70 -284 73 -423 10 -78 -35 -188 -140 -218 -208 l-19 -42 -94 0 c-73 0 -93 3 -93 14 0 8 21 56 47 107 38 76 62 110 127 174 172 170 394 227 636 164z" />
+                                        <path d="M3895 1952 c-177 -53 -280 -166 -307 -337 -6 -39 -8 -134 -6 -216 4 -129 8 -151 31 -202 14 -31 38 -72 54 -92 33 -42 124 -107 185 -134 109 -46 276 -64 390 -40 142 30 282 124 336 226 11 20 7 24 -71 66 -45 25 -97 52 -115 61 l-33 17 -44 -40 c-57 -52 -104 -71 -177 -71 -72 0 -115 17 -151 59 -27 32 -27 33 -27 198 0 135 3 170 16 193 49 82 208 93 254 17 11 -18 20 -42 20 -54 0 -21 -4 -23 -60 -23 l-60 0 0 -70 0 -70 235 0 235 0 0 255 0 256 -72 -3 -72 -3 -20 -67 -19 -68 -58 54 c-83 77 -144 99 -289 103 -89 2 -129 -2 -175 -15z" />
+                                        <path d="M250 1445 l0 -505 303 0 c166 0 331 5 367 11 160 26 249 110 266 249 12 104 -27 184 -114 236 l-52 32 30 5 c35 7 108 70 123 107 5 14 13 81 17 150 5 96 11 136 28 173 l21 47 -165 0 c-91 0 -173 -4 -183 -10 -34 -18 -51 -83 -51 -196 0 -115 -13 -157 -52 -168 -13 -3 -58 -6 -100 -6 l-78 0 0 190 0 190 -180 0 -180 0 0 -505z m551 -64 c21 -17 24 -28 24 -85 0 -91 -11 -100 -125 -104 l-90 -4 0 106 0 106 84 0 c68 0 88 -4 107 -19z" />
+                                        <path d="M1272 1942 c1 -5 82 -233 178 -506 l175 -496 186 0 187 0 11 28 c25 63 341 964 341 973 0 5 -80 9 -190 9 -136 0 -190 -3 -190 -11 0 -7 -9 -43 -20 -80 l-21 -69 -144 0 -144 0 -24 78 -24 77 -162 3 c-92 1 -161 -1 -159 -6z m598 -369 c0 -12 -69 -265 -73 -269 -1 -2 -20 53 -41 123 -20 69 -40 132 -43 139 -4 11 11 14 76 14 45 0 81 -3 81 -7z" />
+                                        <path d="M2450 1445 l0 -505 154 0 153 0 174 231 174 231 3 -231 2 -231 165 0 165 0 0 505 0 505 -152 -1 -153 0 -175 -227 -175 -227 -3 228 -2 227 -165 0 -165 0 0 -505z" />
+                                        <path d="M4740 1445 l0 -505 430 0 430 0 0 130 0 130 -250 0 -251 0 3 78 3 77 163 3 162 2 0 80 0 80 -165 0 -165 0 0 75 0 75 250 0 250 0 0 140 0 140 -430 0 -430 0 0 -505z" />
+                                        <path d="M5770 1445 l0 -507 318 5 c260 3 328 7 377 21 149 44 239 127 282 261 19 60 27 266 14 370 -22 177 -104 273 -281 331 -47 15 -103 18 -382 22 l-328 4 0 -507z m574 237 c49 -28 58 -72 54 -257 -4 -220 -16 -235 -178 -235 l-90 0 0 253 c0 140 3 257 8 261 13 14 174 -3 206 -22z" />
+                                    </g>
+                                </svg>
+                            }
+                            break;
+                        case Models.Range.Reach:
+                            {
+                                <image width="73.8" height="10" x="9.6" y="31.55" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAuIAAAB+CAMAAABWBoQcAAAAAXNSR0IB2cksfwAAAvdQTFRF////wHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPeZUidYwAAAP10Uk5TAAASMlFyka3D3Onr/+rFrpNSMxOSxNuscQ43cOborzkN57BvAidrvPy9KQMobHh6JnsqWcnMXA9aW8gZgfL0hBv1Hpn3bU40IBUM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" />
+                            }
+                            break;
+                    }
+                
+                    @if(h.heroCard.NumSidekicks != 0)
+                    {
+                        switch(h.heroCard.SidekickRange)
+                        {
+                            case Models.Range.Melee:
+                                {
+                                    <svg viewBox="0 0 12380 2950" width="60" height="13.7" x="14.1" y="152.5">
+                                        <g fill="#E4756D" stroke="none">
+                                            <path d="M7865 2619 c-249 -19 -510 -139 -690 -316 -357 -354 -445 -869 -225 -1318 326 -663 1197 -840 1755 -356 135 117 239 263 311 437 46 111 46 112 -18 107 -29 -3 -57 -5 -61 -6 -5 -2 -19 -28 -32 -60 -94 -233 -263 -415 -488 -527 -337 -167 -714 -140 -1032 73 -136 91 -287 275 -352 430 -63 151 -77 224 -78 407 0 143 3 176 23 245 58 200 140 343 272 474 216 216 509 321 814 291 241 -23 446 -120 620 -295 103 -103 173 -212 240 -377 15 -38 15 -38 75 -38 l59 0 -10 38 c-17 63 -104 238 -157 315 -102 147 -299 312 -455 381 -178 79 -371 111 -571 95z" />
+                                            <path d="M10735 2619 c-155 -14 -333 -70 -460 -146 -260 -157 -464 -425 -529 -696 l-7 -28 62 3 62 3 22 65 c87 258 287 479 538 595 269 124 591 121 864 -11 242 -116 433 -332 516 -582 48 -142 60 -231 54 -377 -10 -263 -105 -480 -292 -671 -487 -496 -1314 -363 -1627 261 -20 39 -44 96 -54 127 -19 63 -21 64 -97 51 -36 -5 -39 -8 -33 -34 11 -57 68 -190 116 -269 101 -168 227 -295 396 -397 259 -158 575 -200 880 -118 311 83 586 314 724 608 375 799 -253 1692 -1135 1616z" />
+                                            <path d="M7870 2010 c-19 -19 -20 -33 -20 -220 l0 -201 -247 4 c-137 3 -266 8 -287 12 -75 14 -136 -42 -136 -126 0 -88 86 -147 166 -114 29 12 83 15 270 15 l234 0 0 -214 c0 -193 2 -216 18 -237 26 -31 78 -31 104 0 17 22 18 53 18 542 0 506 -1 520 -20 539 -11 11 -33 20 -50 20 -17 0 -39 -9 -50 -20z" />
+                                            <path d="M390 1425 l0 -505 244 0 244 0 51 148 c98 279 114 322 121 322 3 0 42 -106 86 -235 l79 -235 238 0 237 0 0 505 0 505 -180 0 -180 0 0 -267 c0 -146 -3 -264 -6 -260 -3 3 -48 122 -99 264 l-93 258 -113 0 -112 0 -90 -257 c-50 -142 -94 -258 -99 -258 -4 0 -8 117 -8 260 l0 260 -160 0 -160 0 0 -505z" />
+                                            <path d="M1870 1425 l0 -505 430 0 430 0 0 130 0 130 -250 0 -251 0 3 78 3 77 163 3 162 2 0 80 0 80 -165 0 -165 0 0 75 0 75 250 0 250 0 0 140 0 140 -430 0 -430 0 0 -505z" />
+                                            <path d="M2890 1425 l0 -505 180 0 180 0 0 365 0 365 250 0 250 0 0 140 0 140 -430 0 -430 0 0 -505z" />
+                                            <path d="M3880 1425 l0 -505 430 0 430 0 0 130 0 130 -250 0 -251 0 3 78 3 77 163 3 162 2 0 80 0 80 -165 0 -165 0 0 75 0 75 250 0 250 0 0 140 0 140 -430 0 -430 0 0 -505z" />
+                                            <path d="M4900 1425 l0 -505 430 0 430 0 0 130 0 130 -250 0 -251 0 3 78 3 77 163 3 162 2 0 80 0 80 -165 0 -165 0 0 75 0 75 250 0 250 0 0 140 0 140 -430 0 -430 0 0 -505z" />
+                                            <path d="M8050 1607 l0 -97 1715 0 1715 0 0 -30 0 -30 -1715 0 -1715 0 0 -95 0 -95 73 5 c39 3 772 28 1627 55 855 28 1597 53 1649 56 l94 6 49 45 c26 25 48 51 48 59 0 17 -88 93 -114 99 -12 2 -721 27 -1576 55 -855 28 -1621 53 -1702 57 l-148 6 0 -96z" />
+                                        </g>
+                                    </svg>
+                                }
+                                break;
+                            case Models.Range.Ranged:
+                                {
+                                    <svg viewBox="0 0 13570 2960" width="62" height="14.1" x="16" y="152.3">
+                                        <g fill="#74B0DD" stroke="none">
+                                            <path d="M10409 2739 c-395 -58 -742 -308 -924 -665 -47 -92 -94 -226 -115 -326 l-11 -58 -112 0 -112 1 -105 195 c-58 108 -109 198 -115 200 -5 2 -274 3 -597 2 l-587 -3 154 -295 154 -295 -96 -185 c-53 -102 -123 -236 -155 -297 l-60 -113 239 0 238 0 98 190 c54 104 102 192 108 195 5 4 9 -70 9 -190 l0 -195 251 2 251 3 107 195 107 195 114 0 114 0 8 -44 c13 -74 67 -224 113 -316 62 -121 124 -205 229 -311 176 -176 384 -287 636 -341 118 -25 362 -25 480 0 176 38 353 116 486 215 95 71 245 225 303 313 82 124 170 337 186 452 l7 47 221 -2 221 -3 74 -135 c41 -74 91 -165 111 -203 l37 -67 425 286 c233 157 430 292 437 299 11 10 -68 67 -419 304 -237 161 -437 290 -443 288 -6 -3 -56 -89 -111 -191 l-100 -186 -226 0 -227 0 -7 48 c-3 26 -22 94 -41 152 -146 439 -516 756 -973 834 -100 17 -286 19 -382 5z m436 -214 c196 -49 403 -174 527 -318 122 -142 189 -268 241 -457 30 -111 30 -381 -1 -493 -87 -316 -277 -553 -557 -692 -343 -170 -746 -141 -1066 76 -132 89 -266 245 -343 397 -29 58 -86 221 -86 246 0 15 13 16 95 14 l96 -3 23 -65 c97 -280 325 -490 607 -561 117 -30 291 -30 413 0 263 63 491 260 592 509 48 120 59 179 59 327 0 169 -16 237 -85 380 -86 175 -213 304 -385 390 -135 68 -223 88 -380 89 -164 0 -242 -18 -391 -90 -94 -44 -126 -67 -198 -135 -47 -45 -108 -114 -134 -154 -52 -77 -106 -195 -117 -257 l-7 -38 -98 0 -98 0 13 59 c74 316 306 593 605 722 213 92 451 111 675 54z m-75 -376 c211 -56 385 -226 457 -444 33 -102 38 -263 10 -365 -82 -300 -343 -500 -651 -500 -111 0 -185 18 -291 69 -97 48 -188 128 -249 220 -37 56 -86 150 -86 167 0 2 44 4 98 4 l98 0 23 -41 c39 -68 123 -144 207 -185 71 -36 85 -39 178 -42 73 -3 117 0 156 12 240 70 389 316 339 558 -30 144 -123 265 -252 328 -143 70 -284 73 -423 10 -78 -35 -188 -140 -218 -208 l-19 -42 -94 0 c-73 0 -93 3 -93 14 0 8 21 56 47 107 38 76 62 110 127 174 172 170 394 227 636 164z" />
+                                            <path d="M3895 1952 c-177 -53 -280 -166 -307 -337 -6 -39 -8 -134 -6 -216 4 -129 8 -151 31 -202 14 -31 38 -72 54 -92 33 -42 124 -107 185 -134 109 -46 276 -64 390 -40 142 30 282 124 336 226 11 20 7 24 -71 66 -45 25 -97 52 -115 61 l-33 17 -44 -40 c-57 -52 -104 -71 -177 -71 -72 0 -115 17 -151 59 -27 32 -27 33 -27 198 0 135 3 170 16 193 49 82 208 93 254 17 11 -18 20 -42 20 -54 0 -21 -4 -23 -60 -23 l-60 0 0 -70 0 -70 235 0 235 0 0 255 0 256 -72 -3 -72 -3 -20 -67 -19 -68 -58 54 c-83 77 -144 99 -289 103 -89 2 -129 -2 -175 -15z" />
+                                            <path d="M250 1445 l0 -505 303 0 c166 0 331 5 367 11 160 26 249 110 266 249 12 104 -27 184 -114 236 l-52 32 30 5 c35 7 108 70 123 107 5 14 13 81 17 150 5 96 11 136 28 173 l21 47 -165 0 c-91 0 -173 -4 -183 -10 -34 -18 -51 -83 -51 -196 0 -115 -13 -157 -52 -168 -13 -3 -58 -6 -100 -6 l-78 0 0 190 0 190 -180 0 -180 0 0 -505z m551 -64 c21 -17 24 -28 24 -85 0 -91 -11 -100 -125 -104 l-90 -4 0 106 0 106 84 0 c68 0 88 -4 107 -19z" />
+                                            <path d="M1272 1942 c1 -5 82 -233 178 -506 l175 -496 186 0 187 0 11 28 c25 63 341 964 341 973 0 5 -80 9 -190 9 -136 0 -190 -3 -190 -11 0 -7 -9 -43 -20 -80 l-21 -69 -144 0 -144 0 -24 78 -24 77 -162 3 c-92 1 -161 -1 -159 -6z m598 -369 c0 -12 -69 -265 -73 -269 -1 -2 -20 53 -41 123 -20 69 -40 132 -43 139 -4 11 11 14 76 14 45 0 81 -3 81 -7z" />
+                                            <path d="M2450 1445 l0 -505 154 0 153 0 174 231 174 231 3 -231 2 -231 165 0 165 0 0 505 0 505 -152 -1 -153 0 -175 -227 -175 -227 -3 228 -2 227 -165 0 -165 0 0 -505z" />
+                                            <path d="M4740 1445 l0 -505 430 0 430 0 0 130 0 130 -250 0 -251 0 3 78 3 77 163 3 162 2 0 80 0 80 -165 0 -165 0 0 75 0 75 250 0 250 0 0 140 0 140 -430 0 -430 0 0 -505z" />
+                                            <path d="M5770 1445 l0 -507 318 5 c260 3 328 7 377 21 149 44 239 127 282 261 19 60 27 266 14 370 -22 177 -104 273 -281 331 -47 15 -103 18 -382 22 l-328 4 0 -507z m574 237 c49 -28 58 -72 54 -257 -4 -220 -16 -235 -178 -235 l-90 0 0 253 c0 140 3 257 8 261 13 14 174 -3 206 -22z" />
+                                        </g>
+                                    </svg>
+                                }
+                                break;
+                            case Models.Range.Reach:
+                                {
+                                    <image width="73.8" height="10" x="9.6" y="154.35" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAuIAAAB+CAMAAABWBoQcAAAAAXNSR0IB2cksfwAAAvdQTFRF////wHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPewHPeZUidYwAAAP10Uk5TAAASMlFyka3D3Onr/+rFrpNSMxOSxNuscQ43cOborzkN57BvAidrvPy9KQMobHh6JnsqWcnMXA9aW8gZgfL0hBv1Hpn3bU40IBUM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" />
+                                }
+                                break;
+                        }
+                    }
+                    
+                    <!--Quote-->
+                    @if (h.heroCard.NumSidekicks == 0)
+                    {
+                        <!--<image width="124" height="173.3" href="/images/Quotes.png"></image>-->
+                        <svg viewBox="0 0 62 63" x="-5.4" y="118.3" width="50" height="50">
+                            <path fill="white" transform="scale(0.65, 1)" d="M31.738 22.645L31.738 28.043L37.391 28.043L37.391 22.141L34.836 22.141C34.836 20.305 35.949 19.152 37.391 19.152L37.391 17.531C34.043 17.531 31.738 19.691 31.738 22.645ZM24.645 22.645L24.645 28.043L30.297 28.043L30.297 22.141L27.742 22.141C27.742 20.305 28.859 19.152 30.297 19.152L30.297 17.531C26.949 17.531 24.645 19.691 24.645 22.645Z"></path>
+                        </svg>
+                        <svg viewBox="0 0 62 63" x="96.7" y="118.3" width="50" height="50">
+                            <path fill="white" transform="scale(0.65, 1)" d="M37.391 23.219L37.391 17.785L31.738 17.785L31.738 23.723L34.293 23.723C34.293 25.559 33.18 26.676 31.738 26.676L31.738 28.297C35.086 28.297 37.391 26.137 37.391 23.219ZM30.297 23.219L30.297 17.785L24.645 17.785L24.645 23.723L27.203 23.723C27.203 25.559 26.086 26.676 24.645 26.676L24.645 28.297C27.992 28.297 30.297 26.137 30.297 23.219Z"></path>
+                        </svg>
+                        <svg x="15.4" y="133" width="93.2" height="100%">
+                            @foreach (AbilityChunk chunk in h.quote)
+                            {
+                                <text><text x="@(93.2 / 2)" y="@(chunk.y + 7.3)" width="93.2" font-family="League Gothic" font-size="6pt" fill="white" text-anchor="middle">@chunk.chunk</text></text>
+                            }
+                        </svg>
+                    }
+                </svg>
+                </svg>
+            </th>
+            <th>
+                <input type="text" class="form-control" placeholder="Input Character" @bind="@h.heroCard.HeroName" />
+            </th>
+            <th>
+                <input type="number" class="form-control" placeholder="Input Health" @bind="@h.heroCard.HeroHealth" />
+            </th>
+            <th>
+                <InputSelect class="form-select" @bind-Value="@h.heroCard.HeroRange">
+                    @foreach (var value in Enum.GetValues(typeof(UnMaker.Components.Models.Range)))
+                    {
+                        <option>
+                            @value
+                        </option>
+                    }
+                </InputSelect>
+            </th>
+            <th>
+                <input type="number" class="form-control" placeholder="Input MOVE" @bind="@h.heroCard.Move" />
+            </th>
+            <th>
+                <input type="text" class="form-control" placeholder="Input Character" @bind="@h.heroCard.SidekickName" />
+            </th>
+            <th>
+                <input type="number" class="form-control" placeholder="Input Health" @bind="@h.heroCard.SidekickHealth" />
+            </th>
+            <th>
+                <InputSelect class="form-select" @bind-Value="@h.heroCard.SidekickRange">
+                    @foreach (var value in Enum.GetValues(typeof(UnMaker.Components.Models.Range)))
+                    {
+                        <option>
+                            @value
+                        </option>
+                    }
+                </InputSelect>
+            </th>
+            <th>
+                <input type="number" class="form-control" placeholder="Input Number of Sidekicks" @bind="@h.heroCard.NumSidekicks" />
+            </th>
+        </tr>
+        <tr>
+            <th colspan="3">
+                <input type="text" class="form-control" placeholder="Input Ability" @onchange="(args => UpdateAbility(args, h))" value="@h.heroCard.Ability" />
+            </th>
+            <th colspan="3">
+                <input type="text" class="form-control" placeholder="Input Quote" @onchange="(args => UpdateQuote(args, h))" value="@h.heroCard.Quote" />
+            </th>
+            <th>
+                <InputSelect class="form-select" ValueExpression="@(() => h.heroCard.BackId)" Value="@h.heroCard.BackId" ValueChanged="((int? value) => HeroBackChanged(value, h))">
+                    <option value="">
+                        None
+                    </option>
+                    @foreach (HeroCardImage image in heroCards.ToList())
+                    {
+                        if(image.heroCard.HeroCardId != h.heroCard.HeroCardId)
+                        {
+                            <option value="@image.heroCard.HeroCardId">
+                                @image.heroCard.HeroName
+                            </option>
+                        }
+                    }
+                </InputSelect>
+            </th>
+            <th>
+                <button class="btn btn-primary" disabled="@saveDisabled" @onclick="(() => DownloadHeroCardAsync(h))">Download</button>
+            </th>
+        </tr>
+    }
+</table>
+
+<h3>Edit Cards</h3>
+<button class="btn btn-primary" @onclick="AddCard">Add Card</button>
+
+<table class="table">
+    @foreach(CardImage c in cards.ToList())
+    {
+        <tr>
+            <th rowspan="2">
+                <tl>
+                    @if(c.card.Type != CardType.Custom)
+                    {
+                        <svg width="180" height="300">
+                        <svg viewBox="0 0 124 173.3" id="@("card" + c.card.CardId.ToString())" xmlns="http://www.w3.org/2000/svg" version="1.1">
+                        <!--Card Art-->
+                        <image width="112.2" height="@(161.3 - c.EffectBoxHeight)" x="5.9" y="5.9" href="@c.display" preserveAspectRatio="xMinYMin slice"></image>
+
+                        <!--Name Box Sizing-->
+                        <polygon points="5.8,33.9 25.7,33.9 25.7,@(48.2 + c.NameBoxHeight) 15.7,@(48.2 + c.NameBoxHeight + 5.6) 5.8,@(48.2 + c.NameBoxHeight)" fill="@c.card.NameBackgroundColor" />
+
+                        <!--Card Symbol-->
+                        @if (c.card.Type == CardType.Attack)
+                        {
+                            <polygon points="5.8,5.8 25.7,5.8 25.7,34 15.7,39.6 5.8,34" fill="#E03434"></polygon>
+                            <svg width="11.8" height="11.8" x="9.8" y="8.9" viewBox="0 0 8680 8520">
+                                <path fill="white" d="M5991 8453 c-12 -21 -25 -45 -31 -53 -5 -8 -241 -448 -525 -977 -285 -530 -520 -963 -525 -963 -7 0 -1014 1904 -1034 1956 -11 28 -26 32 -26 7 -1 -10 -47 -465 -103 -1012 -66 -637 -107 -996 -114 -998 -12 -4 -379 265 -376 276 1 4 -4 8 -10 8 -20 0 -806 587 -799 597 3 5 1 6 -5 3 -5 -3 -103 64 -217 149 -114 84 -213 154 -219 154 -8 0 -9 -3 -1 -8 5 -4 40 -79 76 -167 37 -88 231 -558 433 -1045 202 -487 370 -895 373 -907 2 -13 2 -23 -2 -23 -15 0 -2213 1125 -2223 1139 -7 8 -13 12 -13 8 0 -7 -341 160 -350 172 -3 3 -9 7 -15 8 -5 1 -19 5 -30 9 -14 6 -8 -7 22 -42 51 -61 129 -137 135 -133 10 8 1849 -1794 1840 -1803 -19 -19 -1165 -547 -1175 -541 -5 3 -8 2 -4 -3 3 -5 -82 -49 -188 -99 -107 -49 -193 -90 -192 -92 2 -1 365 -58 807 -128 890 -138 860 -133 860 -145 0 -13 -1490 -1365 -1501 -1362 -6 1 -8 -1 -5 -6 6 -10 -211 -208 -225 -204 -5 1 -8 -2 -7 -7 2 -5 -62 -69 -142 -142 -487 -445 -479 -437 -451 -434 14 1 33 5 41 9 37 14 235 56 247 52 7 -3 13 -2 13 3 0 12 197 54 211 45 7 -4 10 -3 6 2 -3 6 100 34 236 65 133 31 673 156 1200 279 527 122 960 220 963 217 3 -3 -134 -519 -306 -1148 -240 -882 -308 -1144 -299 -1153 9 -8 10 -8 6 0 -8 14 36 57 47 47 4 -5 6 -3 4 3 -4 14 953 1004 964 998 5 -3 7 -1 6 4 -4 12 573 612 587 612 10 -1 909 -1146 904 -1152 -2 -2 8 -14 21 -28 21 -21 27 -23 36 -10 7 8 10 20 7 27 -3 7 -1 13 4 13 5 0 9 8 9 18 1 19 441 1443 449 1451 3 2 22 -11 43 -30 20 -19 102 -95 182 -169 80 -73 172 -158 205 -190 170 -160 1715 -1590 1719 -1590 3 0 -18 51 -46 113 -28 61 -51 120 -52 130 0 9 -3 17 -6 17 -11 0 -40 71 -34 82 4 6 3 9 -2 6 -10 -6 -430 926 -428 948 1 8 -1 12 -5 10 -4 -3 -29 46 -56 107 -27 62 -63 144 -81 182 -89 193 -423 943 -426 956 -2 8 2 13 7 13 47 -5 1812 -511 1808 -518 -4 -5 -1 -6 6 -2 6 4 51 -4 101 -18 49 -14 94 -26 100 -26 6 0 -142 129 -328 288 -187 158 -337 290 -335 295 2 4 0 6 -5 5 -12 -4 -338 272 -335 284 2 4 -1 7 -6 5 -11 -2 -951 792 -951 804 0 11 -85 -9 800 185 415 90 763 163 773 160 9 -2 15 -1 13 3 -3 4 137 38 310 76 181 40 314 73 314 80 0 6 -8 11 -17 11 -10 0 -270 90 -578 199 -308 109 -722 256 -920 325 -267 95 -360 132 -360 144 0 19 1437 1935 1448 1929 4 -3 7 -1 6 4 -4 15 13 43 22 37 5 -3 8 -1 7 4 -4 14 211 302 225 302 6 0 8 3 4 6 -3 4 6 23 21 42 15 20 23 33 17 30 -54 -32 -550 -246 -558 -241 -7 3 -9 2 -4 -2 9 -11 -581 -278 -595 -269 -6 4 -9 3 -5 -2 6 -10 -977 -458 -1005 -458 -9 0 -15 -3 -13 -6 4 -6 -495 -233 -501 -227 -4 3 32 586 96 1582 12 176 29 444 39 595 10 151 17 277 15 278 -1 2 -12 -13 -23 -35z m-5605 -1805 l29 -33 -32 29 c-31 28 -38 36 -30 36 2 0 16 -15 33 -32z"></path>
+                            </svg>
+                        }
+                        else if (c.card.Type == CardType.Versatile)
+                        {
+                            <polygon points="5.8,5.8 25.7,5.8 25.7,34 15.7,39.6 5.8,34" fill="#704C8C"></polygon>
+                            <svg width="12" height="12" x="8.6" y="8.7" viewBox="0 0 7900 8020">
+                                <path fill="white" d="M4233 7983 c-8 -21 -39 -94 -68 -163 -29 -69 -85 -201 -123 -295 -149 -362 -240 -584 -278 -677 -21 -54 -42 -97 -46 -95 -4 1 -109 79 -234 172 -125 94 -245 183 -268 199 -22 16 -45 34 -51 41 -5 7 -28 24 -50 38 -22 15 -74 52 -117 84 -42 32 -98 74 -125 93 -26 19 -73 54 -103 77 -30 23 -121 91 -201 150 -81 59 -195 144 -254 188 -184 138 -209 154 -220 144 -6 -6 -5 -25 3 -53 14 -53 182 -494 369 -966 47 -118 103 -262 124 -320 22 -58 46 -118 53 -135 7 -16 32 -77 54 -135 23 -58 80 -203 127 -324 47 -120 84 -221 81 -223 -3 -3 -11 -1 -18 3 -7 5 -18 9 -25 10 -11 2 -276 103 -335 128 -35 15 -92 37 -288 111 -69 27 -199 77 -290 112 -310 121 -337 132 -785 304 -203 78 -422 162 -485 186 -271 105 -331 123 -337 106 -8 -20 318 -343 1455 -1443 259 -250 471 -457 471 -460 0 -3 -149 -75 -332 -160 -1127 -524 -1250 -584 -1245 -608 3 -17 65 -33 178 -47 25 -3 56 -8 70 -10 56 -11 606 -97 620 -97 8 0 37 -4 64 -9 27 -5 196 -32 375 -60 179 -27 336 -53 348 -57 19 -6 1 -25 -145 -157 -91 -82 -276 -251 -412 -375 -279 -256 -479 -438 -1150 -1050 -544 -496 -640 -588 -640 -612 0 -29 0 -29 353 76 104 31 196 58 205 60 9 1 24 6 32 9 18 7 120 36 146 41 11 3 33 9 49 16 17 6 32 12 35 12 3 0 10 2 15 4 40 13 395 114 410 117 11 2 27 7 35 10 24 10 253 76 275 79 11 2 25 6 30 10 12 7 185 57 212 61 10 1 23 5 28 9 12 7 94 30 115 32 9 1 20 5 25 8 12 7 264 80 285 83 8 1 22 5 30 9 42 18 445 131 448 126 1 -4 -67 -204 -152 -446 -543 -1544 -656 -1870 -656 -1895 0 -41 38 -21 175 93 11 9 53 44 92 76 40 33 79 66 87 74 8 7 31 27 52 43 21 17 54 44 73 61 48 42 379 318 415 346 16 13 39 32 52 43 12 11 40 34 60 50 21 17 50 42 64 56 48 49 328 278 333 273 3 -3 10 3 16 14 11 22 138 127 152 127 5 0 9 4 9 8 -1 12 91 86 104 84 5 -1 10 3 11 9 0 12 113 110 118 103 2 -2 50 -110 107 -239 137 -313 149 -338 357 -798 31 -67 60 -125 64 -128 4 -2 13 4 19 15 9 18 11 824 10 6679 l0 1012 -21 0 c-14 0 -25 -11 -36 -37z"></path>
+                                <path fill="white" d="M4954 7818 c-12 -19 -18 -7438 -7 -7449 7 -7 164 20 469 80 253 50 475 93 494 96 19 2 111 20 203 40 93 19 171 34 175 33 4 -1 14 1 22 5 17 6 893 178 930 182 14 1 32 5 40 8 14 5 357 73 417 82 15 3 66 13 113 22 l85 18 0 1300 c0 1387 -3 1475 -49 1705 -14 69 -27 136 -28 150 -2 14 -7 31 -11 37 -5 7 -6 17 -2 22 3 5 0 13 -6 16 -5 4 -8 13 -5 21 3 7 1 16 -3 19 -8 4 -24 61 -26 90 0 6 -3 15 -6 20 -4 6 -25 73 -49 150 -24 77 -51 158 -61 181 -11 22 -19 45 -19 52 0 6 -6 26 -14 44 -13 30 -81 192 -109 262 -16 39 -221 449 -250 501 -13 22 -36 63 -51 90 -72 126 -307 476 -415 617 -429 561 -979 1068 -1626 1498 -119 80 -186 120 -199 120 -3 0 -8 -5 -12 -12z"></path>
+                            </svg>
+                        }
+                        else if (c.card.Type == CardType.Defense)
+                        {
+                            <polygon points="5.8,5.8 25.7,5.8 25.7,34 15.7,39.6 5.8,34" fill="#3074AC"></polygon>
+                            <svg width="12.1" height="12.1" x="10.5" y="8.9" viewBox="0 0 7900 8020">
+                                <path fill="white" d="M3305 7754 c-600 -333 -1097 -700 -1549 -1144 -359 -354 -579 -615 -838 -1000 -424 -628 -733 -1353 -852 -2002 -55 -297 -56 -323 -56 -1678 0 -687 2 -1250 5 -1250 2 0 771 -150 1709 -334 l1704 -334 1704 334 c936 184 1707 334 1711 334 4 0 6 586 4 1303 -4 1405 -2 1349 -58 1652 -117 635 -421 1359 -822 1960 -532 798 -1247 1469 -2112 1984 -159 95 -418 241 -427 241 -2 0 -57 -30 -123 -66z"></path>
+                            </svg>
+                        }
+                        else if (c.card.Type == CardType.Scheme)
+                        {
+                            <polygon points="5.8,5.8 25.7,5.8 25.7,34 15.7,39.6 5.8,34" fill="#FFBC74"></polygon>
+                            <svg width="20" height="20.5" x="5.8" y="8.6" viewBox="0 0 5190 12910">
+                                <path fill="white" d="M73 12883 c7 -35 182 -616 858 -2847 640 -2111 1029 -3406 1029 -3421 0 -22 -140 -25 -1044 -25 -490 0 -897 -4 -904 -9 -14 -9 12 -122 968 -4226 549 -2356 532 -2286 556 -2296 50 -18 3564 -73 3564 -55 0 8 -243 505 -1080 2206 -1046 2127 -1236 2517 -1228 2525 4 5 700 -7 1513 -25 582 -13 885 -13 885 0 0 12 -117 200 -1463 2362 -2940 4720 -3639 5838 -3650 5838 -5 0 -7 -12 -4 -27z" />
+                            </svg>
+                        }
+
+                        <!--Name Box Border-->
+                        <path d="M26.2 5.6, v@(42.1 + c.NameBoxHeight), l-10.7 6.1, l-10.7 -6.1" stroke-width="1.5" stroke="@c.card.BorderColor" fill="none"></path>
+
+                        <!--Name and Value-->
+                        <text width="@c.NameBoxHeight" height="14" x="19.7" y="45.4" transform="rotate(-90 19.7 45.4)" font-family="Bebas Neue" fill="white" font-size="9pt" text-anchor="end" letter-spacing="-0.01em">@c.card.Name</text>
+                        @if(c.card.Type != CardType.Scheme)
+                        {
+                            <text><text x="15.7" y="35.1" font-family="Bebas Neue" font-size="15.5" fill="white" text-anchor="middle">@(c.card.Value.ToString())</text></text>
+                        }
+
+                        <!--Effect Box Sizing-->
+                        <!--BOOST Trick-->
+                        @if(String.IsNullOrEmpty(c.card.BoostEffect))
+                        {
+                            <!--EFFECT BOX NORMAL-->
+                            <rect width="@c.EffectBoxHeight" height="112.4" x="5.8" y="167.4" transform="rotate(-90 5.8 167.4)" fill="@c.card.EffectBackgroundColor"></rect>
+                            <rect width="112.4" height="1.6" x="5.8" y="@(166.2 - c.EffectBoxHeight)" fill="@c.card.BorderColor"></rect>
+
+                            <!--BOOST Circle-->
+                            <circle r="7.5" cx="108.3" cy="@(166.2 - c.EffectBoxHeight)" fill="@c.card.BorderColor"></circle>
+                            <circle r="5.9" cx="108.3" cy="@(166.2 - c.EffectBoxHeight)" fill="@c.card.EffectBackgroundColor"></circle>
+                            <text><text x="108.3" y="@(169.3 - c.EffectBoxHeight)" font-family="Bebas Neue" font-size="10" fill="white" text-anchor="middle">@c.card.Boost</text></text>
+                        }
+                        else
+                        {
+                            <!--EFFECT BOX W/ BOOST TRICK-->
+                            <rect width="@(c.EffectBoxHeight + 4.2)" height="112.4" x="5.8" y="167.4" transform="rotate(-90 5.8 167.4)" fill="@c.card.EffectBackgroundColor"></rect>
+                            <rect width="112.4" height="1.6" x="5.8" y="@(161.9 - c.EffectBoxHeight)" fill="@c.card.BorderColor"></rect>
+
+                            <!--BOOST BOX-->
+                            <path d="M108.3,@(168.6 - c.EffectBoxHeight) h@(-c.BoostWidth - 5.4) a6.7,6.7 0 0 1 0,-13.4 h@(c.BoostWidth + 5.4) a6.7,6.7 0 0 1 0,13.4" stroke="@c.card.BorderColor" fill="@c.card.EffectBackgroundColor" stroke-width="1.6"></path>
+
+                            <!--BOOST Circle-->
+                            <circle r="7.5" cx="108.3" cy="@(161.9 - c.EffectBoxHeight)" fill="@c.card.BorderColor"></circle>
+                            <circle r="5.9" cx="108.3" cy="@(161.9 - c.EffectBoxHeight)" fill="@c.card.EffectBackgroundColor"></circle>
+                            <text><text x="108.3" y="@(165 - c.EffectBoxHeight)" font-family="Bebas Neue" font-size="10" fill="white" text-anchor="middle">2</text></text>
+
+                            <text><text x="100.2" y="@(164.1 - c.EffectBoxHeight)" font-family="Archivo Narrow" font-size="5pt" fill="white" text-anchor="end">@c.card.BoostEffect</text></text>
+                        }
+
+                        <!--Title Text-->
+                        <text x="11.8" y="@(179.6 - c.EffectBoxHeight)" font-family="Bebas Neue" font-size="10" fill="white" text-anchor="start">@c.card.Title</text>
+                        @if(!String.IsNullOrEmpty(c.card.Effects))
+                        {
+                            <rect width="100.4" height=".7" x="11.8" y="@(182.2 - c.EffectBoxHeight)" fill="white"></rect>
+                        }
+
+                        <!--Effect Text-->
+                        <svg width="102.4" height="100%" x="11.8" y="@(184.8 - c.EffectBoxHeight)">
+                            @foreach (EffectChunk chunk in c.effects)
+                            {
+                                if(chunk.bonusAttackSymbol)
+                                {
+                                    <polygon fill="#E03434" points="@(chunk.x),@(chunk.y + 2.7) @(chunk.x + 5),@(chunk.y + 2.7) @(chunk.x + 6.3),@(chunk.y + 5) @(chunk.x + 5),@(chunk.y + 7.3) @(chunk.x),@(chunk.y + 7.3)"></polygon>
+                                }
+                                else
+                                {
+                                    <text><text x="@chunk.x" y="@(chunk.y + 7.3)" font-family="@(chunk.timing ? "Bebas Neue" : "Archivo Narrow")" font-size="@(chunk.timing ? "6pt" : "5pt")" fill="white">@chunk.chunk</text></text>
+                                }
+                            }
+                        </svg>
+
+                        <!--Bonus Attack-->
+                        @if (!String.IsNullOrEmpty(c.card.BonusTitle))
+                        {
+                            <polygon points="5.8,@(163.4 - c.BonusAttackHeight) 25,@(163.4 - c.BonusAttackHeight) 29.2, @(170.7 - c.BonusAttackHeight) 25.2,@(177.5 - c.BonusAttackHeight) 5.8,@(177.5 - c.BonusAttackHeight)" fill="#E03434"></polygon>
+                            <svg width="8.9" height="8.9" x="8.3" y="@(166.2 - c.BonusAttackHeight)" viewBox="0 0 8680 8520">
+                                <path fill="white" d="M5991 8453 c-12 -21 -25 -45 -31 -53 -5 -8 -241 -448 -525 -977 -285 -530 -520 -963 -525 -963 -7 0 -1014 1904 -1034 1956 -11 28 -26 32 -26 7 -1 -10 -47 -465 -103 -1012 -66 -637 -107 -996 -114 -998 -12 -4 -379 265 -376 276 1 4 -4 8 -10 8 -20 0 -806 587 -799 597 3 5 1 6 -5 3 -5 -3 -103 64 -217 149 -114 84 -213 154 -219 154 -8 0 -9 -3 -1 -8 5 -4 40 -79 76 -167 37 -88 231 -558 433 -1045 202 -487 370 -895 373 -907 2 -13 2 -23 -2 -23 -15 0 -2213 1125 -2223 1139 -7 8 -13 12 -13 8 0 -7 -341 160 -350 172 -3 3 -9 7 -15 8 -5 1 -19 5 -30 9 -14 6 -8 -7 22 -42 51 -61 129 -137 135 -133 10 8 1849 -1794 1840 -1803 -19 -19 -1165 -547 -1175 -541 -5 3 -8 2 -4 -3 3 -5 -82 -49 -188 -99 -107 -49 -193 -90 -192 -92 2 -1 365 -58 807 -128 890 -138 860 -133 860 -145 0 -13 -1490 -1365 -1501 -1362 -6 1 -8 -1 -5 -6 6 -10 -211 -208 -225 -204 -5 1 -8 -2 -7 -7 2 -5 -62 -69 -142 -142 -487 -445 -479 -437 -451 -434 14 1 33 5 41 9 37 14 235 56 247 52 7 -3 13 -2 13 3 0 12 197 54 211 45 7 -4 10 -3 6 2 -3 6 100 34 236 65 133 31 673 156 1200 279 527 122 960 220 963 217 3 -3 -134 -519 -306 -1148 -240 -882 -308 -1144 -299 -1153 9 -8 10 -8 6 0 -8 14 36 57 47 47 4 -5 6 -3 4 3 -4 14 953 1004 964 998 5 -3 7 -1 6 4 -4 12 573 612 587 612 10 -1 909 -1146 904 -1152 -2 -2 8 -14 21 -28 21 -21 27 -23 36 -10 7 8 10 20 7 27 -3 7 -1 13 4 13 5 0 9 8 9 18 1 19 441 1443 449 1451 3 2 22 -11 43 -30 20 -19 102 -95 182 -169 80 -73 172 -158 205 -190 170 -160 1715 -1590 1719 -1590 3 0 -18 51 -46 113 -28 61 -51 120 -52 130 0 9 -3 17 -6 17 -11 0 -40 71 -34 82 4 6 3 9 -2 6 -10 -6 -430 926 -428 948 1 8 -1 12 -5 10 -4 -3 -29 46 -56 107 -27 62 -63 144 -81 182 -89 193 -423 943 -426 956 -2 8 2 13 7 13 47 -5 1812 -511 1808 -518 -4 -5 -1 -6 6 -2 6 4 51 -4 101 -18 49 -14 94 -26 100 -26 6 0 -142 129 -328 288 -187 158 -337 290 -335 295 2 4 0 6 -5 5 -12 -4 -338 272 -335 284 2 4 -1 7 -6 5 -11 -2 -951 792 -951 804 0 11 -85 -9 800 185 415 90 763 163 773 160 9 -2 15 -1 13 3 -3 4 137 38 310 76 181 40 314 73 314 80 0 6 -8 11 -17 11 -10 0 -270 90 -578 199 -308 109 -722 256 -920 325 -267 95 -360 132 -360 144 0 19 1437 1935 1448 1929 4 -3 7 -1 6 4 -4 15 13 43 22 37 5 -3 8 -1 7 4 -4 14 211 302 225 302 6 0 8 3 4 6 -3 4 6 23 21 42 15 20 23 33 17 30 -54 -32 -550 -246 -558 -241 -7 3 -9 2 -4 -2 9 -11 -581 -278 -595 -269 -6 4 -9 3 -5 -2 6 -10 -977 -458 -1005 -458 -9 0 -15 -3 -13 -6 4 -6 -495 -233 -501 -227 -4 3 32 586 96 1582 12 176 29 444 39 595 10 151 17 277 15 278 -1 2 -12 -13 -23 -35z m-5605 -1805 l29 -33 -32 29 c-31 28 -38 36 -30 36 2 0 16 -15 33 -32z"></path>
+                            </svg>
+                            <text><text x="21.9" y="@(175.1 - c.BonusAttackHeight)" font-family="Bebas Neue" font-size="8.5pt" fill="white" text-anchor="middle">@c.card.BonusValue</text></text>
+                            <text><text x="32.8" y="@(174.4 - c.BonusAttackHeight)" font-family="Bebas Neue" font-size="7pt" fill="white" text-anchor="start">@c.card.BonusTitle</text></text>
+                            <rect width="112.4" height="1.6" x="5.8" y="@(162.3 - c.BonusAttackHeight)" fill="@c.card.BorderColor"></rect>
+
+                            @if (!String.IsNullOrEmpty(c.card.BonusEffects))
+                            {
+                                <rect width="79.4" height=".7" x="32.8" y="@(176.7 - c.BonusAttackHeight)" fill="white"></rect>
+                            }
+
+                            <svg width="102.4" height="100%" x="11.8" y="@(179.3 - c.BonusAttackHeight)">
+                                @foreach (EffectChunk chunk in c.bonusEffects)
+                                {
+                                    if(chunk.bonusAttackSymbol)
+                                    {
+                                        <polygon fill="#E03434" points="@(chunk.x),@(chunk.y + 2.7) @(chunk.x + 5),@(chunk.y + 2.7) @(chunk.x + 6.3),@(chunk.y + 5) @(chunk.x + 5),@(chunk.y + 7.3) @(chunk.x),@(chunk.y + 7.3)"></polygon>
+                                    }
+                                    else
+                                    {
+                                        <text><text x="@chunk.x" y="@(chunk.y + 7.3)" font-family="@(chunk.timing ? "Bebas Neue" : "Archivo Narrow")" font-size="@(chunk.timing ? "6pt" : "5pt")" fill="white">@chunk.chunk</text></text>
+                                    }
+                                }
+                            </svg>
+                        }
+
+                        <!--Copies Text-->
+                        <text x="109.2" y="164.4" font-family="Bebas Neue" font-size="3.8" fill="white" text-anchor="end">@deck.Name</text>
+                        <rect width="0.6" height="5.7" x="110.4" y="160.1" fill="white"></rect> 
+                        <text x="112.2" y="164.4" font-family="Bebas Neue" font-size="3" fill="white" text-anchor="start">x</text>
+                        <text x="113.4" y="164.4" font-family="Bebas Neue" font-size="3.8" fill="white" text-anchor="start">@c.card.Count</text>
+
+                        <!--Card Border-->
+                        <rect width="118" height="167.3" x="3" y="3" stroke-width="6" rx="3" ry="3" stroke="@c.card.BorderColor" fill="none"></rect>
+                        <path d="M9,3 h106 a6,6 0 0 1 6,6 v155.3 a6,6 0 0 1 -6,6 h-106 a6,6 0 0 1 -6,-6 v-155.3 a6,6 0 0 1 6,-6 z" fill="none" stroke="@c.card.BorderColor" stroke-width="6" stroke-linejoin="round" />
+                        </svg>
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg viewBox="0 0 124 173.3" id="@("card" + c.card.CardId.ToString())" xmlns="http://www.w3.org/2000/svg" version="1.1">
+                            <image width="124" height="173.3" href="@c.display" />
+                        </svg>
+                    }
+                </tl>
+            </th>
+            <th>
+                <input type="text" class="form-control" placeholder="Input Title" @bind="@c.card.Title" />
+            </th>
+            <th>
+                <InputSelect class="form-select" @bind-Value="@c.card.Type">
+                    @foreach(var value in Enum.GetValues(typeof(CardType)))
+                    {
+                        <option>
+                            @value
+                        </option>
+                    }
+                </InputSelect>
+            </th>
+            <th>
+                <input type="text" class="form-control" placeholder="Input Character" @onchange="@(args => NameBoxHeightCalc(args, c))" value="@c.card.Name" />
+            </th>
+            <th>
+                <input type="number" class="form-control" placeholder="Input Value" @bind="@c.card.Value" />
+            </th>
+            <th>
+                <input type="number" class="form-control" placeholder="Input BOOST Value" @bind="@c.card.Boost" />
+            </th>
+            <th>
+                <input type="number" class="form-control" placeholder="Input Number of Copies" @bind="@c.card.Count" />
+            </th>
+        </tr>
+        <tr>
+            <th colspan="2">
+                <input type="text" class="form-control" placeholder="Input Effects" @onchange="(args => UpdateEffects(args, c))" value="@c.card.Effects" />
+            </th>
+            <th>
+                <button class="btn btn-primary" @onclick="(() => OnEditCardModalClick(c))">Edit Card</button>
+            </th>
+            <th>
+                @if(c.card.Type != CardType.Custom)
+                {
+                    <InputFile type="file" OnChange="@(args => DisplayImage(ImageType.CardArt, args, c.card.CardId))" />
+                }
+                else
+                {
+                    <InputFile type="file" OnChange="@(args => DisplayImage(ImageType.CustomCard, args, c.card.CardId))" />
+                }
+            </th>
+            <th>
+                <button class="btn btn-primary" @onclick="(() => OnEditArtModalClick(c.card.CardId, c.display))">Edit Art</button>
+            </th>
+            <th>
+                <button class="btn btn-primary" disabled="@saveDisabled" @onclick="(() => DownloadCardAsync(c))">Download</button>
+            </th>
+        </tr>
+    }
+</table>
+
+<script>
+    function getTextWidth(text, font) {
+        const canvas = getTextWidth.canvas || (getTextWidth.canvas = document.createElement("canvas"));
+        const context = canvas.getContext("2d");
+        context.font = font;
+        const metrics = context.measureText(text);
+        return metrics.width;
+    }
+</script>
+
+<script>
+    function getImage(cardId, svg) {
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext("2d");
+        canvas.width = 1240;
+        canvas.height = 1733;
+
+        const blob = new Blob([svg], { type: 'img/svg+xml' });
+        const url = URL.createObjectURL(blob);
+
+        console.log(url);
+
+        var image = document.createElement("img");
+        image.addEventListener('load', () => URL.revokeObjectURL(url), {once: true});
+        image.src = url;
+
+        ctx.drawImage(image, 0, 0);
+        var outputurl = canvas.toDataURL();
+        return outputurl;
+    }
+</script>
+
+<script>
+  window.downloadFileFromStream = async (fileName, contentStreamReference) => {
+    const arrayBuffer = await contentStreamReference.arrayBuffer();
+    const blob = new Blob([arrayBuffer]);
+    const url = URL.createObjectURL(blob);
+    const anchorElement = document.createElement('a');
+    anchorElement.href = url;
+    anchorElement.download = fileName ?? '';
+    anchorElement.click();
+    anchorElement.remove();
+    URL.revokeObjectURL(url);
+  }
+</script>
+
+<script>
+    function getSvg(id) {
+        return document.getElementById(id).outerHTML;
+    }
+</script>
+
+@code {
+    private List<string> imagefiletypes = new List<string>() { ".png", ".jpg", ".jpeg" };
+    private string? ImgurClientID;
+
+    //************************************************************************************************************
+    // Modal controls
+
+    private Modal modal = default!;
+
+    //display card copy modal
+    private async Task OnShowModalClick()
+    {
+        var parameters = new Dictionary<string, object>();
+        parameters.Add("DeckId", deck.DeckId);
+        parameters.Add("OnClickCallback", EventCallback.Factory.Create<int>(this, CopyCard));
+        await modal.ShowAsync<CardCopy>(title: "Copy Cards", parameters: parameters);
+    }
+
+    //display card edit modal
+    private async Task OnEditCardModalClick(CardImage image)
+    {
+        var parameters = new Dictionary<string, object>();
+        parameters.Add("Image", image);
+        parameters.Add("OnEditCallback", EventCallback.Factory.Create<CardImage>(this, UpdateCard));
+        await modal.ShowAsync<CardEdit>(title: "Card Editor", parameters: parameters);
+    }
+
+    //display art edit modal
+    private async Task OnEditArtModalClick(int cardId, string cardArt)
+    {
+        var parameters = new Dictionary<string, object>();
+        parameters.Add("CardId", cardId);
+        parameters.Add("Image", cardArt);
+        parameters.Add("OnCropCallback", EventCallback.Factory.Create<Tuple<int, string>>(this, CropArt));
+        await modal.ShowAsync<ArtEditor>(title: "Art Editor", parameters: parameters);
+    }
+
+    //hide modal
+    private async Task OnHideModalClick()
+    {
+        await modal.HideAsync();
+    }
+
+    //copy a card from another deck
+    private async Task CopyCard(int cardId)
+    {
+        Card? c = await DBContext.Card.FirstOrDefaultAsync(m => m.CardId == cardId);
+        if(c != null)
+        {
+            await AddCard(c);
+        }
+    }
+
+    //crop card art
+    private async Task CropArt(Tuple<int, string> data)
+    {
+        int index = cards.FindIndex(m => m.card.CardId == data.Item1);
+        string title = cards[index].card.Title ?? "upload";
+
+        if(!String.IsNullOrEmpty(data.Item2))
+        {
+            string? upload = await UploadImageFromString(title, data.Item2);
+
+            if(upload != null)
+            {
+                cards[index].card.CardArtURL = upload;
+                cards[index].display = Imgur.IdToImage(upload);
+                cards[index].image = null;
+            }
+        }
+
+        await modal.HideAsync();
+    }
+
+    //************************************************************************************************************
+    // Display cards and hero cards
+    [Parameter]
+    public string? id { get; set; }
+    private Deck deck = new Deck();
+    private List<CardImage> cards = new List<CardImage>();
+    private List<HeroCardImage> heroCards = new List<HeroCardImage>();
+
+    //update card effects
+    private async Task UpdateEffects(ChangeEventArgs e, CardImage image)
+    {
+        if (e.Value != null)
+        {
+            image.card.Effects = e.Value.ToString();
+        }
+        else
+        {
+            image.card.Effects = null;
+        }
+
+        await LoadEffects(image);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    //display card effects
+    private async Task LoadEffects(CardImage image)
+    {
+        image.effects.Clear();
+        image.bonusEffects.Clear();
+        int lines = await ChunkEffects(image.card.Effects != null ? image.card.Effects : "", image.effects);
+        image.EffectBoxHeight = 42.1 + lines * 5;
+
+        if(!String.IsNullOrEmpty(image.card.BonusTitle))
+        {
+            image.BonusAttackHeight = image.EffectBoxHeight - 7.5;
+
+            if(!String.IsNullOrEmpty(image.card.BonusEffects))
+            {
+                image.EffectBoxHeight += 15.1 + await ChunkEffects(image.card.BonusEffects, image.bonusEffects) * 6;
+            }
+        }
+
+        if(image.EffectBoxHeight < 57.1)
+        {
+            image.EffectBoxHeight = 57.1;
+        }
+
+        if(!String.IsNullOrEmpty(image.card.BonusTitle))
+        {
+            image.BonusAttackHeight = image.EffectBoxHeight - image.BonusAttackHeight;
+        }
+
+        image.BoostWidth = await JsRuntime.InvokeAsync<double>("getTextWidth", image.card.BoostEffect, "normal 5pt Archivo Narrow");
+    }
+
+    //update hero card ability
+    private async Task UpdateAbility(ChangeEventArgs e, HeroCardImage image)
+    {
+        if(e.Value != null)
+        {
+            image.heroCard.Ability = e.Value.ToString();
+        }
+        else
+        {
+            image.heroCard.Ability = null;
+        }
+
+        image.ability.Clear();
+        if(image.heroCard.Ability != null)
+        {
+            await ChunkAbility(image.heroCard.Ability, image.ability, 80);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    //update hero card quote
+    private async Task UpdateQuote(ChangeEventArgs e, HeroCardImage image)
+    {
+        if(e.Value != null)
+        {
+            image.heroCard.Quote = e.Value.ToString();
+        }
+        else
+        {
+            image.heroCard.Quote = null;
+        }
+
+        image.quote.Clear();
+        if(image.heroCard.Quote != null)
+        {
+            await ChunkAbility(image.heroCard.Quote, image.quote, 95); 
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    //calculate name box sizing
+    private async Task NameBoxHeightCalc(ChangeEventArgs e, CardImage image)
+    {
+        if(e.Value != null)
+        {
+            image.card.Name = e.Value.ToString();
+        }
+        else
+        {
+            image.card.Name = "";
+        }
+
+        image.NameBoxHeight = await JsRuntime.InvokeAsync<double>("getTextWidth", image.card.Name, "normal 9pt Bebas Neue");  
+    }
+
+    //update hero card backs
+    private void HeroBackChanged(int? value, HeroCardImage image)
+    {
+        if(image.heroCard.BackId != null)
+        {
+            int index = heroCards.FindIndex(h => h.heroCard.HeroCardId == image.heroCard.BackId);
+            heroCards[index].heroCard.BackId = null;
+        }
+
+        image.heroCard.BackId = value;
+
+        if(value != null)
+        {
+            int index = heroCards.FindIndex(h => h.heroCard.HeroCardId == value);
+            if (heroCards[index].heroCard.BackId != null)
+            {
+                int index2 = heroCards.FindIndex(h => h.heroCard.HeroCardId == heroCards[index].heroCard.BackId);
+                heroCards[index2].heroCard.BackId = null;
+            }
+            heroCards[index].heroCard.BackId = image.heroCard.HeroCardId;
+        }
+    }
+
+    //************************************************************************************************************
+    // Deck information
+
+    bool saveDisabled = false;
+
+    private string isDisplayCardback = "none";
+    private string cardbackThumbnail = "";
+    private IBrowserFile? cardbackImage = null;
+    private string isDisplayPattern = "none";
+    private string backgroundpatternThumbnail = "";
+    private IBrowserFile? backgroundpatternImage = null;
+
+    InputFile CardBackInput = new InputFile();
+    InputFile BackgroundInput = new InputFile();
+
+    private enum ImageType { CardBack, BackgroundPattern, CardArt, CustomCard }
+
+    //grab cards for an existing deck
+    protected override async Task OnParametersSetAsync()
+    {
+        ImgurClientID = _config["Imgur:ClientId"];
+
+        if(id == null)
+        {
+            deck = new Deck();
+            deck.DeckId = -1;
+        }
+        else
+        {
+            Deck? tempdeck;
+            tempdeck = await DBContext.Deck.FirstOrDefaultAsync(m => m.DeckId == Int32.Parse(id));
+            if(tempdeck != null)
+            {
+                deck = tempdeck;
+                if(tempdeck.CardBackImageURL != null)
+                {
+                    cardbackThumbnail = Imgur.IdToImage(tempdeck.CardBackImageURL);
+                    isDisplayCardback = "block";
+                }
+                if (tempdeck.BackgroundPatternURL != null)
+                {
+                    backgroundpatternThumbnail = Imgur.IdToImage(tempdeck.BackgroundPatternURL);
+                    isDisplayPattern = "block";
+                }
+
+                List<Card> cardList = await DBContext.Card.ToListAsync();
+                cardList.RemoveAll(m => m.DeckId != deck.DeckId);
+
+                foreach(Card c in cardList)
+                {
+                    CardImage image = new CardImage();
+                    image.card = c;
+                    if(c.CardArtURL != null && c.CardArtURL != "")
+                    {
+                        image.display = Imgur.IdToImage(c.CardArtURL);
+                    }
+                    cards.Add(image);
+                }
+
+                List<HeroCard> heroCardList = await DBContext.HeroCard.ToListAsync();
+                heroCardList.RemoveAll(m => m.DeckId != deck.DeckId);
+
+                foreach(HeroCard h in heroCardList)
+                {
+                    HeroCardImage image = new HeroCardImage();
+                    image.heroCard = h;
+                    heroCards.Add(image);
+                }
+            }
+            else
+            {
+                deck = new Deck();
+                deck.DeckId = -1;
+            }
+        }
+    }
+
+    //load images for cards and hero cards on first render
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if(firstRender)
+        {
+            foreach(CardImage image in cards.ToList())
+            {
+                await LoadEffects(image);
+                image.NameBoxHeight = await JsRuntime.InvokeAsync<double>("getTextWidth", image.card.Name, "normal 9pt Bebas Neue");  
+            }
+
+            foreach(HeroCardImage image in heroCards.ToList())
+            {
+                if(image.heroCard.Ability != null) await ChunkAbility(image.heroCard.Ability, image.ability, 80);
+                if(image.heroCard.Quote != null) await ChunkAbility(image.heroCard.Quote, image.quote, 95);     
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    //display uploaded image thumbnail
+    private async Task DisplayImage(ImageType field, InputFileChangeEventArgs e, int? card = null)
+    {
+        IBrowserFile image = e.File;
+        int index = -1;
+        switch (field)
+        {
+            case ImageType.CardBack:
+                cardbackImage = image;
+                break;
+            case ImageType.BackgroundPattern:
+                backgroundpatternImage = image;
+                break;
+            case ImageType.CardArt:
+                index = cards.FindIndex(m => m.card.CardId == card);
+                cards[index].image = image;
+                break;
+            case ImageType.CustomCard:
+                index = cards.FindIndex(m => m.card.CardId == card);
+                cards[index].image = image;
+                break;
+        }
+
+        string extensionname = Path.GetExtension(image.Name);
+        if (imagefiletypes.Contains(extensionname))
+        {
+            IBrowserFile resizedFile;
+            if(ImageType.CardArt == field)
+            {
+                resizedFile = await image.RequestImageFileAsync(image.ContentType, 187, 172);
+            }
+            else if (ImageType.CustomCard == field)
+            {
+                resizedFile = await image.RequestImageFileAsync(image.ContentType, 186, 260);
+            }
+            else
+            {
+                resizedFile = await image.RequestImageFileAsync(image.ContentType, 100, 175);
+            }
+            var buf = new byte[resizedFile.Size];
+            using (var stream = resizedFile.OpenReadStream())
+            {
+                await stream.ReadAsync(buf); // copy the stream to the buffer
+            }
+            switch (field)
+            {
+                case ImageType.CardBack:
+                    cardbackThumbnail = "data:image/jpeg;base64," + Convert.ToBase64String(buf);
+                    isDisplayCardback = "block";
+                    break;
+                case ImageType.BackgroundPattern:
+                    backgroundpatternThumbnail = "data:image/jpeg;base64," + Convert.ToBase64String(buf);
+                    isDisplayPattern = "block";
+                    break;
+                case ImageType.CardArt:
+                    cards[index].display = "data:image/jpeg;base64," + Convert.ToBase64String(buf);
+                    break;
+                case ImageType.CustomCard:
+                    cards[index].display = "data:image/jpeg;base64," + Convert.ToBase64String(buf);
+                    break;
+            }
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    //save cards and deck
+    private async Task SaveDeck()
+    {
+        if (saveDisabled) return;
+        saveDisabled = true;
+
+        await InvokeAsync(StateHasChanged);
+
+        if(deck.DeckId == -1)
+        {
+            //add new deck
+            Deck newDeck = new Deck();
+            newDeck.Name = deck.Name;
+            newDeck.DeckBuilderId = 0;
+            newDeck.CardBackImageURL = await UploadImage(cardbackImage);
+            newDeck.BackgroundPatternURL = await UploadImage(backgroundpatternImage);
+
+            var res = DBContext.Add(newDeck);
+            deck.DeckId = res.Entity.DeckId;
+            deck.CardBackImageURL = res.Entity.CardBackImageURL;
+            deck.BackgroundPatternURL = res.Entity.BackgroundPatternURL;
+        }
+        else
+        {
+            //update deck
+            string? uploaded = await UploadImage(cardbackImage);
+            if (uploaded != null) deck.CardBackImageURL = uploaded;
+            uploaded = await UploadImage(backgroundpatternImage);
+            if (uploaded != null) deck.BackgroundPatternURL = uploaded;
+
+            DBContext.Update(deck);
+        }
+
+        foreach (CardImage c in cards)
+        {
+
+            string? uploaded = await UploadImage(c.image);
+            if (uploaded != null)
+            {
+                c.card.CardArtURL = uploaded;
+                c.display = Imgur.IdToImage(uploaded);
+            }
+
+            uploaded = await UploadCard(c);
+            if (uploaded != null)
+            {
+                c.card.CardImageURL = uploaded;
+            }
+
+            if (c.card.CardId < 0)
+            {
+                //add new card
+                c.card.CardId = 0;
+                var res = DBContext.Add(c.card);
+                c.card.CardId = res.Entity.CardId;
+            }
+            else
+            {
+                //update card
+                DBContext.Update(c.card);
+            }
+
+        }
+
+        foreach(HeroCardImage h in heroCards)
+        {
+            string? uploaded = await UploadHeroCard(h);
+            if(uploaded != null)
+            {
+                h.heroCard.HeroCardImageURL = uploaded;
+            }
+
+            if (h.heroCard.HeroCardId < 0)
+            {
+                h.heroCard.HeroCardId = 0;
+                var res = DBContext.Add(h.heroCard);
+                h.heroCard.HeroCardId = res.Entity.HeroCardId;
+            }
+        }
+
+        await DBContext.SaveChangesAsync();
+
+        saveDisabled = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    //************************************************************************************************************
+    // Uploads, imports, and exports
+
+    //upload image to imgur
+    private async Task<String?> UploadImage(IBrowserFile? image)
+    {
+        String? id = null;
+        if (image != null && ImgurClientID != null)
+        {
+            //upload image to imgur
+            string uniqueFileName = Guid.NewGuid().ToString() + "_" + image.Name;
+
+            HttpClient client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Client-ID", ImgurClientID);
+
+            using MultipartFormDataContent upload = new MultipartFormDataContent();
+
+            upload.Add(new StreamContent(image.OpenReadStream(maxAllowedSize: 1024 * 1024 * 20)), "image", image.Name);
+            upload.Add(new StringContent(uniqueFileName), "title");
+            upload.Add(new StringContent("Un-Maker Card Art"), "description");
+
+            var response = await client.PostAsync("https://api.imgur.com/3/image", upload);
+
+            string responseString = await response.Content.ReadAsStringAsync();
+
+            //parse response
+            JObject resultObject = JObject.Parse(responseString);
+            if (null != resultObject["success"] && bool.Parse(resultObject["success"].ToString()))
+            {
+                var imgurResult = resultObject["data"].ToObject<ImgurResult>();
+                if (imgurResult != null)
+                {
+                    id = imgurResult.id;
+                }
+            }
+        }
+        return id;
+    }
+
+    //upload base 64 string from cropper to imgur
+    private async Task<String?> UploadImageFromString(string title, string image)
+    {
+        String? id = null;
+        if(!String.IsNullOrEmpty(image) && ImgurClientID != null)
+        {
+            //upload image to imgur
+            string uniqueFileName = Guid.NewGuid().ToString() + "_" + title;
+
+            HttpClient client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Client-ID", ImgurClientID);
+
+            using MultipartFormDataContent upload = new MultipartFormDataContent();
+
+            var bytes = Convert.FromBase64String(image.Substring(image.IndexOf(",") + 1));
+            var contents = new StreamContent(new MemoryStream(bytes));
+
+            upload.Add(new StreamContent(new MemoryStream(bytes)), "image", title);
+            upload.Add(new StringContent(uniqueFileName), "title");
+            upload.Add(new StringContent("Un-Maker Card Art"), "description");
+
+            var response = await client.PostAsync("https://api.imgur.com/3/image", upload);
+
+            string responseString = await response.Content.ReadAsStringAsync();
+
+            //parse response
+            JObject resultObject = JObject.Parse(responseString);
+            if (null != resultObject["success"] && bool.Parse(resultObject["success"].ToString()))
+            {
+                var imgurResult = resultObject["data"].ToObject<ImgurResult>();
+                if (imgurResult != null)
+                {
+                    id = imgurResult.id;
+                }
+            }
+        }
+        return id;
+    }
+
+    //upload card to imgur
+    private async Task<String?> UploadCard(CardImage image)
+    {
+        String? id = null;
+
+        if(ImgurClientID != null)
+        {
+            //get svg as png stream
+            string svgText = "<svg width=\"1240\" height=\"1733\" xmlns=\"http://www.w3.org/2000/svg\">";
+            svgText += await JsRuntime.InvokeAsync<string>("getSvg", "card" + image.card.CardId.ToString());
+            svgText += "</svg>";
+            SvgDocument svgDocument = SvgDocument.FromSvg<SvgDocument>(svgText);
+
+            SvgFontManager.PrivateFontPathList.Add(@".\ServerContent\Fonts\bebasneue.otf");
+            SvgFontManager.PrivateFontPathList.Add(@".\ServerContent\Fonts\archivonarrow.otf");
+
+            Bitmap bitmap = svgDocument.Draw();
+            MemoryStream stream = new MemoryStream();
+            bitmap.Save(stream, ImageFormat.Png);
+            stream.Position = 0;
+
+            //upload image
+            string uniqueFileName = Guid.NewGuid().ToString() + "_" + image.card.Title;
+
+            HttpClient client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Client-ID", ImgurClientID);
+
+            using MultipartFormDataContent upload = new MultipartFormDataContent();
+
+            upload.Add(new StreamContent(stream), "image", image.card.Title + ".png");
+            upload.Add(new StringContent(uniqueFileName), "title");
+            upload.Add(new StringContent("Un-Maker Card Art"), "description");
+
+            var response = await client.PostAsync("https://api.imgur.com/3/image", upload);
+
+            string responseString = await response.Content.ReadAsStringAsync();
+
+            //parse response
+            JObject resultObject = JObject.Parse(responseString);
+            if (null != resultObject["success"] && bool.Parse(resultObject["success"].ToString()))
+            {
+                var imgurResult = resultObject["data"].ToObject<ImgurResult>();
+                if (imgurResult != null)
+                {
+                    id = imgurResult.id;
+                }
+            }
+        }
+
+        return id;
+    }
+
+    //upload hero card to imgur
+    private async Task<String?> UploadHeroCard(HeroCardImage image)
+    {
+        String? id = null;
+        
+        if(ImgurClientID != null)
+        {
+            //get svg as png stream
+            string svgText = "<svg width=\"1240\" height=\"1733\" xmlns=\"http://www.w3.org/2000/svg\">";
+            svgText += await JsRuntime.InvokeAsync<string>("getSvg", "hero" + image.heroCard.HeroCardId.ToString());
+            svgText += "</svg>";
+
+            SvgDocument svgDocument = SvgDocument.FromSvg<SvgDocument>(svgText);
+
+            SvgFontManager.PrivateFontPathList.Add(@".\ServerContent\Fonts\bebasneue.otf");
+            SvgFontManager.PrivateFontPathList.Add(@".\ServerContent\Fonts\archivonarrow.otf");
+            SvgFontManager.PrivateFontPathList.Add(@".\ServerContent\Fonts\knockout.otf");
+            SvgFontManager.PrivateFontPathList.Add(@".\ServerContent\Fonts\leaguegothic.otf");
+
+            Bitmap bitmap = svgDocument.Draw();
+            MemoryStream stream = new MemoryStream();
+            bitmap.Save(stream, ImageFormat.Png);
+            stream.Position = 0;
+
+            //upload image
+            string uniqueFileName = Guid.NewGuid().ToString() + "_" + image.heroCard.HeroName;
+
+            HttpClient client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Client-ID", ImgurClientID);
+
+            using MultipartFormDataContent upload = new MultipartFormDataContent();
+
+            upload.Add(new StreamContent(stream), "image", image.heroCard.HeroName + ".png");
+            upload.Add(new StringContent(uniqueFileName), "title");
+            upload.Add(new StringContent("Un-Maker Card Art"), "description");
+
+            var response = await client.PostAsync("https://api.imgur.com/3/image", upload);
+
+            string responseString = await response.Content.ReadAsStringAsync();
+
+            //parse response
+            JObject resultObject = JObject.Parse(responseString);
+            if (null != resultObject["success"] && bool.Parse(resultObject["success"].ToString()))
+            {
+                var imgurResult = resultObject["data"].ToObject<ImgurResult>();
+                if (imgurResult != null)
+                {
+                    id = imgurResult.id;
+                }
+            }
+        }
+        return id;
+    }
+
+    //add new blank card
+    private void AddCard()
+    {
+        Card card = new Card();
+        card.DeckId = deck.DeckId;
+        card.CardId = -1 - cards.Count();
+        CardImage image = new CardImage();
+        image.card = card;
+        cards.Add(image);
+    }
+
+    //add new card copied from another deck
+    private async Task AddCard(Card c)
+    {
+        Card card = new Card();
+        card.DeckId = deck.DeckId;
+        card.CardId = -1 - cards.Count();
+        card.Title = c.Title;
+        card.Effects = c.Effects;
+        card.Value = c.Value;
+        card.Boost = c.Boost;
+        card.Type = c.Type;
+        CardImage image = new CardImage();
+        image.card = card;
+        await LoadEffects(image);
+        cards.Add(image);
+
+        await InvokeAsync(StateHasChanged);
+        await modal.HideAsync();
+    }
+
+    //update card from card editor
+    private async Task UpdateCard(CardImage image)
+    {
+        int index = cards.FindIndex(m => m.card.CardId == image.card.CardId);
+        if(index != -1)
+        {
+            cards[index] = image;
+        }
+
+        await LoadEffects(cards[index]);
+        await modal.HideAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    //add new blank hero card
+    private void AddHeroCard()
+    {
+        HeroCard heroCard = new HeroCard();
+        heroCard.DeckId = deck.DeckId;
+        heroCard.HeroCardId = -1 - heroCards.Count();
+        HeroCardImage image = new HeroCardImage();
+        image.heroCard = heroCard;
+        heroCards.Add(image);
+    }
+
+    //download card as png
+    private async Task DownloadCardAsync(CardImage c)
+    {
+        if (saveDisabled) return;
+        saveDisabled = true;
+        await InvokeAsync(StateHasChanged);
+
+        string svgText = "<svg width=\"1240\" height=\"1733\" xmlns=\"http://www.w3.org/2000/svg\">";
+        svgText += await JsRuntime.InvokeAsync<string>("getSvg", "card" + c.card.CardId.ToString());
+        svgText += "</svg>";
+
+        SvgDocument svgDocument = SvgDocument.FromSvg<SvgDocument>(svgText);
+
+        SvgFontManager.PrivateFontPathList.Add(@".\ServerContent\Fonts\bebasneue.otf");
+        SvgFontManager.PrivateFontPathList.Add(@".\ServerContent\Fonts\archivonarrow.otf");
+
+        Bitmap bitmap = svgDocument.Draw();
+        MemoryStream stream = new MemoryStream();
+        bitmap.Save(stream, ImageFormat.Png);
+        stream.Position = 0;
+
+        using DotNetStreamReference streamRef = new DotNetStreamReference(stream: stream);
+        await JsRuntime.InvokeVoidAsync("downloadFileFromStream", c.card.Title + ".png", streamRef);
+
+        saveDisabled = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    //download hero card as png
+    private async Task DownloadHeroCardAsync(HeroCardImage h)
+    {
+        if (saveDisabled) return;
+        saveDisabled = true;
+        await InvokeAsync(StateHasChanged);
+
+        string svgText = "<svg width=\"1240\" height=\"1733\" xmlns=\"http://www.w3.org/2000/svg\">";
+        svgText += await JsRuntime.InvokeAsync<string>("getSvg", "hero" + h.heroCard.HeroCardId.ToString());
+        svgText += "</svg>";
+
+        svgText = svgText.Replace("font-family=\"League\"", "font-family=\"League Gothic\"");
+        svgText = svgText.Replace("font-family=\"Knockout\"", "font-family=\"Knockout HTF72-FullCruiserwt\"");
+
+        SvgDocument svgDocument = SvgDocument.FromSvg<SvgDocument>(svgText);
+
+        SvgFontManager.PrivateFontPathList.Add(@".\ServerContent\Fonts\bebasneue.otf");
+        SvgFontManager.PrivateFontPathList.Add(@".\ServerContent\Fonts\archivonarrow.otf");
+        SvgFontManager.PrivateFontPathList.Add(@".\ServerContent\Fonts\knockout.otf");
+        SvgFontManager.PrivateFontPathList.Add(@".\ServerContent\Fonts\leaguegothic.otf");
+
+        Bitmap bitmap = svgDocument.Draw();
+        MemoryStream stream = new MemoryStream();
+        bitmap.Save(stream, ImageFormat.Png);
+        stream.Position = 0;
+
+        using DotNetStreamReference streamRef = new DotNetStreamReference(stream: stream);
+        await JsRuntime.InvokeVoidAsync("downloadFileFromStream", h.heroCard.HeroName + ".png", streamRef);
+
+        saveDisabled = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    //exports deck to TTS json
+    private async Task ExportToJSON()
+    {
+        string export = await TTSExport.GetJSON(DBContext, deck.DeckId);
+        byte[] bytes = System.Text.ASCIIEncoding.ASCII.GetBytes(export);
+
+        MemoryStream stream = new MemoryStream(bytes);
+        stream.Position = 0;
+
+        using DotNetStreamReference streamRef = new DotNetStreamReference(stream: stream);
+        await JsRuntime.InvokeVoidAsync("downloadFileFromStream", deck.Name + ".json", streamRef);
+    }
+
+    //************************************************************************************************************
+    // Text Wrapping
+
+    //helper class to track chunk position
+    private class ChunkTracker
+    {
+        public readonly static double lineWidth = 105;
+        public readonly static double lineHeight = 7.5;
+        public readonly static double symbolWidth = 8;
+
+        public int lines = 0;
+        public double currentPos = 0;
+    }
+
+    //split effects into chunks and return the number of lines
+    private async Task<int> ChunkEffects(string effects, List<EffectChunk> chunkList)
+    {
+        //split effects
+        List<Effect> effectList = new List<Effect>();
+        string[] splitEffect = effects.Split("{");
+        foreach (string eff in splitEffect.ToList())
+        {
+            Effect effect = new Effect();
+            if (!eff.Equals(""))
+            {
+                string[] timingAndEffect = eff.Split("}");
+                if (timingAndEffect.Length > 0)
+                {
+                    if (timingAndEffect.Length < 2)
+                    {
+                        //special case for no effect timing
+                        string[] bonusAttackSplit = timingAndEffect[0].Split("~");
+                        if (bonusAttackSplit.Length > 1)
+                        {
+                            effect.effect = bonusAttackSplit[0];
+                            effect.bonusAttack = bonusAttackSplit[1];
+                            if (bonusAttackSplit.Length > 2)
+                            {
+                                effect.moreEffect = bonusAttackSplit[2];
+                            }
+                        }
+                        else
+                        {
+                            effect.effect = bonusAttackSplit[0];
+                        }
+                    }
+                    else
+                    {
+                        //default case
+                        effect.timing = timingAndEffect[0];
+                        string[] bonusAttackSplit = timingAndEffect[1].Split("~");
+                        if (bonusAttackSplit.Length > 1)
+                        {
+                            effect.effect = bonusAttackSplit[0];
+                            effect.bonusAttack = bonusAttackSplit[1];
+                            if (bonusAttackSplit.Length > 2)
+                            {
+                                effect.moreEffect = bonusAttackSplit[2];
+                            }
+                        }
+                        else
+                        {
+                            effect.effect = bonusAttackSplit[0];
+                        }
+                    }
+                    effectList.Add(effect);
+                }
+            }
+        }
+
+        //place effects
+        ChunkTracker tracker = new ChunkTracker();
+
+        foreach (Effect eff in effectList)
+        {
+            if(!String.IsNullOrEmpty(eff.timing))
+            {
+                string[] timing = eff.timing.Split(' ', '\t', '\r', '\n', '\v', '\f');
+                await ChunkEffects(tracker, timing, "normal 6pt Bebas Neue", chunkList, true);
+            }
+
+            if(!String.IsNullOrEmpty(eff.effect))
+            {
+                string[] effect = eff.effect.Split(' ', '\t', '\r', '\n', '\v', '\f');
+                await ChunkEffects(tracker, effect, "normal 5pt Archivo Narrow", chunkList, false);
+            }
+
+            if (!String.IsNullOrEmpty(eff.bonusAttack))
+            {
+                //Add Bonus Attack symbol
+                if(tracker.currentPos + ChunkTracker.symbolWidth >= ChunkTracker.lineWidth)
+                {
+                    tracker.currentPos = 0;   
+                    tracker.lines++;
+                }
+                chunkList.Add(new EffectChunk(tracker.currentPos, tracker.lines * ChunkTracker.lineHeight, true));
+                tracker.currentPos += ChunkTracker.symbolWidth;
+
+                string[] bonusAttack = eff.bonusAttack.Split(' ', '?', '\t', '\r', '\n', '\v', '\f');
+                await ChunkEffects(tracker, bonusAttack, "normal 6pt Bebas Neue", chunkList, false);
+
+                if (!String.IsNullOrEmpty(eff.moreEffect))
+                {
+                    string[] moreEffects = eff.moreEffect.Split(' ', '?', '\t', '\r', '\n', '\v', '\f');
+                    await ChunkEffects(tracker, moreEffects, "normal 5pt Archivo Narrow", chunkList, false);
+                }
+            }
+
+            tracker.currentPos = 0;   
+            tracker.lines++;
+        }
+
+        return tracker.lines;
+    }
+
+    //create effect chunks and add them to the chunklist
+    private async Task ChunkEffects(ChunkTracker tracker, string[] array, string font, List<EffectChunk> chunkList, bool isTiming)
+    {
+        double spaceLen = await JsRuntime.InvokeAsync<double>("getTextWidth", " ", font);
+
+        double startPos = tracker.currentPos;
+        string chunk = "";
+        foreach (string word in array)
+        {
+            if (word != "")
+            {
+                double wordLen;
+                wordLen = await JsRuntime.InvokeAsync<double>("getTextWidth", word, font);
+
+                if (tracker.currentPos + wordLen + spaceLen < ChunkTracker.lineWidth) //current word fits on line
+                {
+                    if (tracker.currentPos != startPos) chunk += " ";
+                    chunk += word;
+                    tracker.currentPos += wordLen + spaceLen;
+                }
+                else if (wordLen > ChunkTracker.lineWidth) //current word is first in line and longer than the line
+                {
+                    if (tracker.currentPos != 0) //end current line if not already at the start
+                    {
+                        chunkList.Add(new EffectChunk(startPos, tracker.lines * ChunkTracker.lineHeight, isTiming, chunk));
+                        chunk = "";
+                        tracker.currentPos = 0;
+                        startPos = 0;
+                        tracker.lines++;
+                    }
+
+                    int letters;
+                    string bigWord = word;
+                    do //while the word is longer than one line, add chunks of it to the next line
+                    {
+                        letters = 0;
+                        do
+                        {
+                            chunk += bigWord[letters];
+                            tracker.currentPos += await JsRuntime.InvokeAsync<double>("getTextWidth", bigWord[letters], font);
+                            letters++;
+
+                        } while (tracker.currentPos < ChunkTracker.lineWidth);
+
+                        chunk = chunk[..^1]; //funky range notation to remove a character from the end of the string
+                        letters--;
+
+                        chunkList.Add(new EffectChunk(startPos, tracker.lines * ChunkTracker.lineHeight, isTiming, chunk));
+                        chunk = "";
+                        tracker.currentPos = 0;
+                        startPos = 0;
+                        tracker.lines++;
+
+                        bigWord = bigWord.Substring(letters);
+
+                    } while ((wordLen = await JsRuntime.InvokeAsync<double>("getTextWidth", word, font)) > ChunkTracker.lineWidth);
+
+                    chunkList.Add(new EffectChunk(startPos, tracker.lines * ChunkTracker.lineHeight, isTiming, chunk));
+                    chunk = bigWord;
+                    tracker.currentPos = await JsRuntime.InvokeAsync<double>("getTextWidth", word, font);
+                    startPos = 0;
+                    tracker.lines++;
+                }
+                else //move word to next line
+                {
+                    chunkList.Add(new EffectChunk(startPos, tracker.lines * ChunkTracker.lineHeight, isTiming, chunk));
+                    chunk = word;
+                    tracker.currentPos = await JsRuntime.InvokeAsync<double>("getTextWidth", word, font);
+                    startPos = 0;
+                    tracker.lines++;
+                }
+            }
+        }
+
+        if (isTiming)
+        {
+            chunk += " ";
+            tracker.currentPos += spaceLen;
+        }
+
+        chunkList.Add(new EffectChunk(startPos, tracker.lines * ChunkTracker.lineHeight, isTiming, chunk));
+        chunk = "";
+    }
+
+    //split ability into chunks and return the number of lines
+    private async Task<int> ChunkAbility(string effects, List<AbilityChunk> chunkList, int lineWidth)
+    {
+        //split ability
+        string[] splitAbility = effects.Split("\n");
+
+        //place ability pieces
+        ChunkTracker tracker = new ChunkTracker();
+
+        foreach (string eff in splitAbility)
+        {
+            string[] words = eff.Split(' ', '\t', '\r', '\n', '\v', '\f');
+
+            await ChunkAbility(tracker, words, "normal 6pt League Gothic", chunkList, lineWidth);
+        }
+
+        return tracker.lines;
+    }
+
+    //create ability chunks and add them to the chunklist
+    private async Task ChunkAbility(ChunkTracker tracker, string[] array, string font, List<AbilityChunk> chunkList, int lineWidth)
+    {
+        double spaceLen = await JsRuntime.InvokeAsync<double>("getTextWidth", " ", font);
+
+        double startPos = tracker.currentPos;
+        string chunk = "";
+        foreach (string word in array)
+        {
+            if (word != "")
+            {
+                double wordLen;
+                wordLen = await JsRuntime.InvokeAsync<double>("getTextWidth", word, font);
+
+                if (tracker.currentPos + wordLen + spaceLen < lineWidth) //current word fits on line
+                {
+                    if (tracker.currentPos != startPos) chunk += " ";
+                    chunk += word;
+                    tracker.currentPos += wordLen + spaceLen;
+                }
+                else if(wordLen > lineWidth) //current word is first in line and longer than the line
+                {
+                    if (tracker.currentPos != 0) //end current line if not already at the start
+                    {
+                        chunkList.Add(new AbilityChunk(startPos, tracker.lines * AbilityChunk.lineHeight, chunk));
+                        chunk = "";
+                        tracker.currentPos = 0;
+                        startPos = 0;
+                        tracker.lines++;
+                    }
+
+                    int letters;
+                    string bigWord = word;
+                    do //while the word is longer than one line, add chunks of it to the next line
+                    {
+                        letters = 0;
+                        do
+                        {
+                            chunk += bigWord[letters];
+                            tracker.currentPos += await JsRuntime.InvokeAsync<double>("getTextWidth", bigWord[letters], font);
+                            letters++;
+
+                        } while (tracker.currentPos < lineWidth);
+
+                        chunk = chunk[..^1]; //funky regex to remove a character from the end of the string
+                        letters--;
+
+                        chunkList.Add(new AbilityChunk(startPos, tracker.lines * AbilityChunk.lineHeight, chunk));
+                        chunk = "";
+                        tracker.currentPos = 0;
+                        startPos = 0;
+                        tracker.lines++;
+
+                        bigWord = bigWord.Substring(letters);
+
+                    } while ((wordLen = await JsRuntime.InvokeAsync<double>("getTextWidth", word, font)) > AbilityChunk.lineWidth);
+
+                    chunkList.Add(new AbilityChunk(startPos, tracker.lines * AbilityChunk.lineHeight, chunk));
+                    chunk = bigWord;
+                    tracker.currentPos = await JsRuntime.InvokeAsync<double>("getTextWidth", word, font);;
+                    startPos = 0;
+                    tracker.lines++;
+                }
+                else //move word to next line
+                {
+                    chunkList.Add(new AbilityChunk(startPos, tracker.lines * AbilityChunk.lineHeight, chunk));
+                    chunk = word;
+                    tracker.currentPos = await JsRuntime.InvokeAsync<double>("getTextWidth", word, font);
+                    startPos = 0;
+                    tracker.lines++;
+                }
+            }
+        }
+
+        chunkList.Add(new AbilityChunk(startPos, tracker.lines * AbilityChunk.lineHeight, chunk));
+        chunk = "";
+
+        tracker.currentPos = 0;
+        tracker.lines++;
+    }
+}
+
+

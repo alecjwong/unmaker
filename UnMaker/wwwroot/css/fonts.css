@@ -1,0 +1,31 @@
+﻿@font-face {
+    font-family: 'Archivo Narrow';
+    src: url('../fonts/ArchivoNarrow-Regular.otf');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Bebas Neue';
+    src: url('../fonts/BebasNeue-Regular.otf');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Knockout HTF72-FullCruiserwt';
+    src: url('../fonts/Knockout HTF72-FullCruiserwt Regular.otf');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'League Gothic';
+    src: url('../fonts/LeagueGothic-Regular.otf');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
